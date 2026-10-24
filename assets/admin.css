@@ -1,0 +1,60 @@
+.swmg-inline-form {
+	display: inline;
+}
+
+.swmg-col-order {
+	width: 7em;
+	white-space: nowrap;
+}
+
+.swmg-col-order .button-link {
+	text-decoration: none;
+	padding: 0 2px;
+}
+
+.swmg .button-link.swmg-delete {
+	color: #b32d2e;
+}
+
+.swmg-status {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #f0f0f1;
+	color: #50575e;
+	font-weight: 600;
+}
+
+.swmg-status--ok {
+	background: #edfaef;
+	color: #00a32a;
+}
+
+.swmg-status--error {
+	background: #fcf0f1;
+	color: #b32d2e;
+}
+
+.swmg-error {
+	margin-top: 4px;
+	color: #b32d2e;
+}
+
+.swmg-results {
+	margin: 16px 0 24px;
+}
+
+.swmg-debug {
+	max-height: 320px;
+	overflow: auto;
+	padding: 8px;
+	background: #f6f7f7;
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.swmg-clear {
+	display: block;
+	margin-top: 4px;
+}

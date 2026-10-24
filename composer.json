@@ -1,0 +1,46 @@
+{
+    "name": "sw-mailgate/sw-mailgate",
+    "description": "SW Mailgate - send WordPress mail through SMTP, Mailgun, Google or Microsoft 365 with failover, redirection, logging and DNS checks.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "squizlabs/php_codesniffer": "^3.10",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "SWMailgate\\": "src/"
+        }
+    },
+    "extra": {
+        "mozart": {
+            "dep_namespace": "SWMailgate\\Dependencies\\",
+            "dep_directory": "/vendor-prefixed/",
+            "classmap_directory": "/vendor-prefixed/",
+            "classmap_prefix": "SWMailgate_",
+            "constant_prefix": "SWMAILGATE_",
+            "functions_prefix": "swmailgate_",
+            "generate_autoloader": true,
+            "delete_vendor_directories": true
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.2.0"
+        }
+    },
+    "scripts": {
+        "cs": "phpcs --runtime-set ignore_warnings_on_exit 1",
+        "cs:fix": "phpcbf"
+    }
+}

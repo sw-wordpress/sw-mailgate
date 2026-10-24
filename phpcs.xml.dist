@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<ruleset name="SWMailgate">
+    <description>WordPress Coding Standards (same rules as SWNewspaper2).</description>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+    <arg name="cache" value=".phpcs.cache"/>
+    <file>src</file>
+    <file>templates</file>
+    <file>sw-mailgate.php</file>
+    <file>uninstall.php</file>
+
+    <config name="minimum_wp_version" value="6.8"/>
+    <config name="testVersion" value="8.2-"/>
+
+    <rule ref="WordPress">
+        <!-- PSR-4 class names/files in the namespaced code. -->
+        <exclude name="WordPress.Files.FileName"/>
+        <!-- PHPMailer properties and methods are camel/Pascal case. -->
+        <exclude name="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase"/>
+        <exclude name="Universal.Operators.DisallowShortTernary"/>
+        <exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
+        <!-- Docblocks only document parameters that need a generic type (list<string>, array<string, mixed>). -->
+        <exclude name="Squiz.Commenting.FunctionComment.ParamNameNoMatch"/>
+        <exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
+        <exclude name="Squiz.Commenting.ClassComment.Missing"/>
+        <exclude name="Squiz.Commenting.VariableComment.Missing"/>
+        <exclude name="Generic.Commenting.DocComment.MissingShort"/>
+    </rule>
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array"><element value="sw-mailgate"/></property>
+        </properties>
+    </rule>
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array"><element value="sw_mailgate"/><element value="SWMailgate"/><element value="SW_MAILGATE"/></property>
+        </properties>
+    </rule>
+    <rule ref="PHPCompatibilityWP"/>
+    <!-- Templates receive their data through the $data array of the including method. -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
+        <exclude-pattern>templates/*</exclude-pattern>
+    </rule>
+</ruleset>

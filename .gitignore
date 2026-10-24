@@ -1,0 +1,6 @@
+/vendor/
+/vendor-prefixed/
+/node_modules/
+.phpcs.cache
+*.log
+.env
