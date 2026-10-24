@@ -28,6 +28,9 @@ final class Dispatcher {
 	/** @var list<Attempt> */
 	private array $attempts = array();
 
+	/** @var string|null Sender put in place of the WordPress default by filter_from() for the current mail. */
+	private ?string $substituted_from = null;
+
 	public function __construct(
 		private readonly Connection_Repository $connections,
 		private readonly Provider_Registry $providers
@@ -40,6 +43,46 @@ final class Dispatcher {
 
 	public function restrict_to( ?string $connection_id ): void {
 		$this->only = $connection_id;
+	}
+
+	/**
+	 * Hooked to the `wp_mail` filter, which runs first in every wp_mail() call: forgets the state of the
+	 * previous mail.
+	 *
+	 * @param array<string, mixed> $atts
+	 * @return array<string, mixed>
+	 */
+	public function begin_mail( $atts ) {
+		$this->substituted_from = null;
+		return $atts;
+	}
+
+	/**
+	 * Hooked late to `wp_mail_from`. wp_mail() passes the sender to setFrom() before send() runs, and
+	 * the default "wordpress@<host>" is rejected there on hosts without a dot (e.g. "localhost"). So
+	 * the default is replaced with the sender of the first connection already here. apply_sender()
+	 * still sets the sender of each connection that is tried.
+	 *
+	 * @param string $from
+	 * @return string
+	 */
+	public function filter_from( $from ) {
+		$from = (string) $from;
+		if ( ! $this->is_active() || ( ! self::is_default_from( $from ) && is_email( $from ) ) ) {
+			return $from;
+		}
+		foreach ( $this->resolve_chain() as $connection ) {
+			$candidate = $connection->from_email();
+			if ( '' !== $candidate && is_email( $candidate ) ) {
+				$this->substituted_from = $candidate;
+				return $candidate;
+			}
+		}
+		return $from;
+	}
+
+	private static function is_default_from( string $from ): bool {
+		return '' === $from || str_starts_with( strtolower( $from ), 'wordpress@' );
 	}
 
 	/**
@@ -155,7 +198,8 @@ final class Dispatcher {
 
 		$original      = $mailer->From;
 		$original_name = $mailer->FromName;
-		$is_default    = '' === $original || str_starts_with( strtolower( $original ), 'wordpress@' );
+		$is_default    = self::is_default_from( $original )
+			|| ( null !== $this->substituted_from && 0 === strcasecmp( $original, $this->substituted_from ) );
 		if ( ! $is_default && ! $connection->forces_from() ) {
 			return null;
 		}

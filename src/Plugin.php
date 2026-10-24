@@ -41,6 +41,8 @@ final class Plugin {
 
 		// Late, so the catcher wins over plugins that also replace PHPMailer during plugins_loaded.
 		add_action( 'plugins_loaded', array( $this, 'install_mailer' ), PHP_INT_MAX );
+		add_filter( 'wp_mail', array( $this->dispatcher, 'begin_mail' ), 1 );
+		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
 			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher ) )->register();
