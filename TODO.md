@@ -68,10 +68,15 @@ never enables logging; the M2 wp-config opt-in remains required. See `README.md`
 
 ## M4 – Mailgun (0.4.0)
 
-- [ ] `Mailgun_Provider`: `POST /v3/{domain}/messages.mime`, EU/US region, API key as secret
-- [ ] Classify errors with `Send_Result::class_for_http_status()`; store the provider message ID
-- [ ] Connection test: `GET /v3/domains/{domain}`
-- [ ] Shared lightweight HTTP helper (`wp_remote_*`, timeouts, response debug without secrets)
+- [x] `Mailgun_Provider`: `POST /v3/{domain}/messages.mime`, EU/US region, API key as secret
+- [x] Classify errors with `Send_Result::class_for_http_status()`; store the provider message ID
+- [x] Connection test: `GET /v4/domains/{domain}` (current Mailgun domain-details API; replaces the planned v3 endpoint)
+- [x] Shared lightweight HTTP helper (`wp_remote_*`, timeouts, response debug without secrets)
+
+M4 notes: the API envelope includes every recipient, while the uploaded MIME omits
+Bcc. Connection tests are read-only and require domain-read permissions. Diagnostics
+omit raw responses, request content and credentials. Ambiguous successful responses
+stop failover to avoid automatic duplicates. Logging remains wp-config opt-in only.
 
 ## M5 – Failover hardening (0.5.0)
 

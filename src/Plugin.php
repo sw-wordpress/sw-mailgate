@@ -15,6 +15,7 @@ use SWMailgate\Mail\Dispatcher;
 use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Smtp_Provider;
+use SWMailgate\Providers\Mailgun_Provider;
 use SWMailgate\Security\Secret_Store;
 use SWMailgate\Logging\Logger;
 use SWMailgate\Logging\Log_Repository;
@@ -42,7 +43,7 @@ final class Plugin {
 
 		$secrets          = new Secret_Store();
 		$connections      = new Connection_Repository( $secrets );
-		$providers        = new Provider_Registry( array( new Smtp_Provider() ) );
+		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider() ) );
 		$this->dispatcher = new Dispatcher( $connections, $providers );
 		$this->redirector = new Redirector();
 		$logs             = new Log_Repository();

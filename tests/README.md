@@ -58,3 +58,20 @@ deferred recipients, failover, native SMTP without configured connections, scope
 test-form bypass and cleanup, forced/disabled/invalid configuration, staging notices,
 redirected log status and privacy lookup, masking, resend, settings validation, and
 uninstall. SMTP is an in-memory test double; these tests do not connect to a server.
+
+M4 Mailgun scenarios:
+
+```sh
+php tests/integration.php enabled mailgun api
+php tests/integration.php unset mailgun api
+php tests/integration.php enabled mailgun constant
+```
+
+The same `WP_ROOT` / `WP_DB_*` variables apply. WordPress's `pre_http_request`
+intercepts every Mailgun request, so no API credentials or live account are needed
+and no external mail is sent. Tests inspect the multipart wire payload, full
+To/Cc/Bcc envelope and Bcc-only messages, MIME headers, HTML/plain alternatives and
+binary attachments, regional hosts, read-only domain tests, encrypted keys and
+wp-config overrides, TLS/timeouts/redirect settings, HTTP and transport failure
+classification, ambiguous successful responses, safe diagnostics, redirection,
+admin fields/test actions, logging opt-in and uninstall cleanup.
