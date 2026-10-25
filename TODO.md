@@ -54,12 +54,17 @@ Integration tests and supported-version CI are documented in `tests/README.md`.
 
 ## M3 – Redirection (0.3.0)
 
-- [ ] `Redirector`: replace To/Cc/Bcc, add `X-Original-To`, prefix the subject with `[Redirected]`
-- [ ] Settings plus the `SW_MAILGATE_REDIRECT_TO` constant (overrides the UI, e.g. for staging)
-- [ ] Domain/address allowlist that is not redirected
-- [ ] Notice when `wp_get_environment_type() !== 'production'` and redirection is off
-- [ ] Test mail option "ignore redirection"
-- [ ] Log status `redirected` with the original recipients
+- [x] `Redirector`: replace To/Cc/Bcc, add `X-Original-To`, prefix the subject with `[Redirected]`
+- [x] Settings plus the `SW_MAILGATE_REDIRECT_TO` constant (overrides the UI, e.g. for staging)
+- [x] Domain/address allowlist that is not redirected
+- [x] Notice when `wp_get_environment_type() !== 'production'` and redirection is off
+- [x] Test mail option "ignore redirection"
+- [x] Log status `redirected` with the original recipients
+
+M3 notes: exact allowlist matches preserve each recipient's To/Cc/Bcc role; other
+recipients are replaced even with native WordPress transport. Original Bcc addresses
+are never exposed in `X-Original-To`. Invalid targets block delivery. Redirection
+never enables logging; the M2 wp-config opt-in remains required. See `README.md`.
 
 ## M4 – Mailgun (0.4.0)
 

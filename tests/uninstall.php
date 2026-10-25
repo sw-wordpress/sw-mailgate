@@ -23,6 +23,7 @@ $sw_mailgate_test_options = array(
 	'sw_mailgate_secrets'     => array( 'smtp_password' => 'encrypted-test-secret' ),
 	'sw_mailgate_db_version'  => 1,
 	'sw_mailgate_logging'     => array( 'enabled' => true ),
+	'sw_mailgate_redirection' => array( 'target' => 'sink@example.test' ),
 	'unrelated_option'       => 'keep',
 );
 if ( 'default' !== $sw_mailgate_test_mode ) {

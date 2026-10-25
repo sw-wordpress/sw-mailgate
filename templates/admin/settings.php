@@ -17,6 +17,23 @@ defined( 'ABSPATH' ) || exit;
 		<input type="hidden" name="action" value="sw_mailgate_save_settings">
 		<table class="form-table" role="presentation">
 			<tr>
+				<th scope="row"><label for="swmg-redirect-to"><?php esc_html_e( 'Redirect mail to', 'sw-mailgate' ); ?></label></th>
+				<td>
+					<input type="email" name="redirect_to" id="swmg-redirect-to" class="regular-text" value="<?php echo esc_attr( $redirection['target'] ); ?>" <?php disabled( $redirection['locked'] ); ?>>
+					<p class="description"><?php esc_html_e( 'Redirect recipients to this address; leave empty to disable. Allowlisted recipients keep receiving mail directly.', 'sw-mailgate' ); ?></p>
+					<?php if ( $redirection['locked'] ) : ?>
+						<p class="description"><?php esc_html_e( 'The target is controlled by SW_MAILGATE_REDIRECT_TO in wp-config.php.', 'sw-mailgate' ); ?></p>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="swmg-redirect-allowlist"><?php esc_html_e( 'Do not redirect', 'sw-mailgate' ); ?></label></th>
+				<td>
+					<textarea name="redirect_allowlist" id="swmg-redirect-allowlist" rows="5" class="large-text code"><?php echo esc_textarea( implode( "\n", $redirection['allowlist'] ) ); ?></textarea>
+					<p class="description"><?php esc_html_e( 'One email address or exact domain per line. Domain rules include every mailbox at that domain, but no subdomains. Wildcards are not supported.', 'sw-mailgate' ); ?></p>
+				</td>
+			</tr>
+			<tr>
 				<th scope="row"><?php esc_html_e( 'Logging', 'sw-mailgate' ); ?></th>
 				<td>
 					<strong><?php echo esc_html( $settings['enabled'] ? __( 'Enabled in wp-config.php', 'sw-mailgate' ) : __( 'Disabled', 'sw-mailgate' ) ); ?></strong>

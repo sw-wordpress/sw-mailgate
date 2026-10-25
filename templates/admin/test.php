@@ -49,6 +49,8 @@ $preselected = isset( $_GET['connection'] ) ? sanitize_key( wp_unslash( $_GET['c
 				</td>
 			</tr>
 		</table>
+		<p><label><input type="checkbox" name="ignore_redirection" value="1"> <?php esc_html_e( 'Ignore redirection for this test mail', 'sw-mailgate' ); ?></label></p>
+		<p class="description"><?php esc_html_e( 'When checked, the test mail goes directly to the entered recipient, even if wp-config.php forces redirection.', 'sw-mailgate' ); ?></p>
 		<?php submit_button( __( 'Send test mail', 'sw-mailgate' ) ); ?>
 	</form>
 </div>

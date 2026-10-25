@@ -14,6 +14,7 @@ use SWMailgate\Connections\Connection;
 use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Mail\Attempt;
 use SWMailgate\Mail\Dispatcher;
+use SWMailgate\Mail\Redirector;
 use SWMailgate\Providers\Field;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Send_Result;
@@ -35,7 +36,8 @@ final class Admin_Page {
 		private readonly Connection_Repository $connections,
 		private readonly Provider_Registry $providers,
 		private readonly Secret_Store $secrets,
-		private readonly Dispatcher $dispatcher
+		private readonly Dispatcher $dispatcher,
+		private readonly Redirector $redirector
 	) {
 	}
 
@@ -299,16 +301,19 @@ final class Admin_Page {
 		add_action( 'wp_mail_failed', $capture );
 		$this->dispatcher->restrict_to( '' === $only ? null : $only );
 
-		$sent = wp_mail(
+		$send = fn(): bool => wp_mail(
 			$recipient,
 			/* translators: %s: site name */
 			sprintf( __( '[%s] SW Mailgate test mail', 'sw-mailgate' ), wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ),
 			$this->test_body(),
 			array( 'Content-Type: text/html; charset=UTF-8' )
 		);
-
-		$this->dispatcher->restrict_to( null );
-		remove_action( 'wp_mail_failed', $capture );
+		try {
+			$sent = isset( $_POST['ignore_redirection'] ) ? $this->redirector->without_redirection( $send ) : $send();
+		} finally {
+			$this->dispatcher->restrict_to( null );
+			remove_action( 'wp_mail_failed', $capture );
+		}
 
 		$rows = array_map(
 			fn( Attempt $attempt ): array => $this->result_row( $attempt->connection, $attempt->result, $attempt->from ),

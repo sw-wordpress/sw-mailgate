@@ -58,7 +58,13 @@ final class Log_Table extends \WP_List_Table {
 	}
 
 	public function column_status( $item ): string {
-		return esc_html( 'sent' === $item['status'] ? __( 'Sent', 'sw-mailgate' ) : __( 'Failed', 'sw-mailgate' ) );
+		return esc_html(
+			match ( $item['status'] ) {
+			'sent'       => __( 'Sent', 'sw-mailgate' ),
+			'redirected' => __( 'Redirected', 'sw-mailgate' ),
+			default      => __( 'Failed', 'sw-mailgate' ),
+			}
+		);
 	}
 
 	public function column_recipients( $item ): string {

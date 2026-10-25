@@ -18,21 +18,39 @@ use PHPMailer\PHPMailer\Exception;
 final class Mail_Catcher extends \WP_PHPMailer {
 
 	private ?Dispatcher $dispatcher = null;
+	private ?Redirector $redirector = null;
 
 	public function set_dispatcher( Dispatcher $dispatcher ): void {
 		$this->dispatcher = $dispatcher;
+	}
+
+	public function set_redirector( Redirector $redirector ): void {
+		$this->redirector = $redirector;
+	}
+
+	/** Includes addresses deferred by PHPMailer until preSend(), especially IDN recipients. */
+	public function recipient_groups(): array {
+		$groups = array(
+			'to'  => $this->getToAddresses(),
+			'cc'  => $this->getCcAddresses(),
+			'bcc' => $this->getBccAddresses(),
+		);
+		foreach ( $this->RecipientsQueue as $queued ) {
+			$groups[ $queued[0] ][] = array( $queued[1], $queued[2] );
+		}
+		return $groups;
 	}
 
 	/**
 	 * @throws Exception When every connection failed and exceptions are enabled (as in wp_mail()).
 	 */
 	public function send() {
-		if ( null === $this->dispatcher || ! $this->dispatcher->is_active() ) {
-			return parent::send();
-		}
-
 		try {
-			return $this->dispatcher->dispatch( $this );
+			$original_to = null === $this->redirector ? array() : $this->redirector->apply( $this );
+			if ( null === $this->dispatcher || ! $this->dispatcher->is_active() ) {
+				return parent::send();
+			}
+			return $this->dispatcher->dispatch( $this, $original_to );
 		} catch ( Exception $e ) {
 			$this->setError( $e->getMessage() );
 			if ( $this->exceptions ) {
@@ -48,6 +66,7 @@ final class Mail_Catcher extends \WP_PHPMailer {
 	public function __clone() {
 		$this->smtp       = null;
 		$this->dispatcher = null;
+		$this->redirector = null;
 	}
 
 	/**

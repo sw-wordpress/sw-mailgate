@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || exit;
 		<select name="status" id="swmg-status">
 			<option value=""><?php esc_html_e( 'All statuses', 'sw-mailgate' ); ?></option>
 			<option value="sent" <?php selected( $filters['status'], 'sent' ); ?>><?php esc_html_e( 'Sent', 'sw-mailgate' ); ?></option>
+			<option value="redirected" <?php selected( $filters['status'], 'redirected' ); ?>><?php esc_html_e( 'Redirected', 'sw-mailgate' ); ?></option>
 			<option value="failed" <?php selected( $filters['status'], 'failed' ); ?>><?php esc_html_e( 'Failed', 'sw-mailgate' ); ?></option>
 		</select>
 		<label for="swmg-log-connection"><?php esc_html_e( 'Connection', 'sw-mailgate' ); ?></label>

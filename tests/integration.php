@@ -30,6 +30,22 @@ use SWMailgate\Providers\Provider;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Security\Secret_Store;
 
+$redirection_mode = ( $argv[2] ?? '' ) === 'redirection' ? ( $argv[3] ?? 'ui' ) : null;
+if ( null !== $redirection_mode ) {
+	define( 'WP_ENVIRONMENT_TYPE', 'production' === $redirection_mode ? 'production' : 'staging' );
+	if ( 'constant' === $redirection_mode ) {
+		define( 'SW_MAILGATE_REDIRECT_TO', 'config-sink@example.test' );
+	} elseif ( 'empty' === $redirection_mode ) {
+		define( 'SW_MAILGATE_REDIRECT_TO', '' );
+	} elseif ( 'invalid' === $redirection_mode ) {
+		define( 'SW_MAILGATE_REDIRECT_TO', "bad@example.test\r\nBcc: victim@example.test" );
+	} elseif ( 'invalid-type' === $redirection_mode ) {
+		define( 'SW_MAILGATE_REDIRECT_TO', true );
+	} elseif ( ! in_array( $redirection_mode, array( 'ui', 'production' ), true ) ) {
+		throw new InvalidArgumentException( 'Invalid redirection test mode.' );
+	}
+}
+
 // PHP constants are immutable: exercise each configuration in a separate process.
 $logging_mode = $argv[1] ?? 'enabled';
 switch ( $logging_mode ) {
@@ -102,6 +118,7 @@ sw_mailgate_check( (bool) wp_next_scheduled( Logger::CRON_HOOK ), 'Retention cro
 $logs = new Log_Repository();
 $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', Log_Repository::table() ) );
 delete_option( Settings::OPTION );
+delete_option( \SWMailgate\Mail\Redirection_Settings::OPTION );
 delete_option( Connection_Repository::OPTION );
 $connections = new Connection_Repository( new Secret_Store() );
 foreach ( array( 'first', 'second' ) as $id ) {
@@ -121,6 +138,7 @@ $provider = new class() implements Provider {
 			'to' => $envelope->to(), 'cc' => $envelope->cc(), 'bcc' => $envelope->bcc(),
 			'body' => $envelope->mailer()->Body, 'alt' => $envelope->mailer()->AltBody,
 			'reply_to' => $envelope->mailer()->getReplyToAddresses(), 'type' => $envelope->mailer()->ContentType,
+			'subject' => $envelope->subject(), 'mime' => $envelope->mime(), 'connection' => $connection->id(),
 		);
 		if ( 'permanent' === $this->mode ) {
 			return Send_Result::failure( Send_Result::PERMANENT, 'Rejected user@example.test' );
@@ -131,6 +149,11 @@ $provider = new class() implements Provider {
 add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => array_merge( $providers, array( $provider ) ) );
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
+if ( null !== $redirection_mode ) {
+	include __DIR__ . '/redirection.php';
+	$sw_mailgate_test_complete = true;
+	exit;
+}
 if ( 'enabled' !== $logging_mode ) {
 	update_option( Settings::OPTION, array( 'enabled' => true, 'store_body' => true ) );
 	sw_mailgate_check( false === Settings::get()['enabled'], 'Stored settings cannot enable logging (' . $logging_mode . ').' );
