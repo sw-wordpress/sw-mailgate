@@ -30,6 +30,16 @@ use SWMailgate\Providers\Provider;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Security\Secret_Store;
 
+$mailgun_mode = ( $argv[2] ?? '' ) === 'mailgun' ? ( $argv[3] ?? 'api' ) : null;
+if ( 'constant' === $mailgun_mode ) {
+	define( 'SW_MAILGATE_MAILGUN_DOMAIN', 'mg.config.example.test' );
+	define( 'SW_MAILGATE_MAILGUN_REGION', 'eu' );
+	define( 'SW_MAILGATE_MAILGUN_API_KEY', 'key-config-example-mailgun' );
+	define( 'SW_MAILGATE_MAILGUN_TIMEOUT', 999 );
+} elseif ( null !== $mailgun_mode && 'api' !== $mailgun_mode ) {
+	throw new InvalidArgumentException( 'Invalid Mailgun test mode.' );
+}
+
 $redirection_mode = ( $argv[2] ?? '' ) === 'redirection' ? ( $argv[3] ?? 'ui' ) : null;
 if ( null !== $redirection_mode ) {
 	define( 'WP_ENVIRONMENT_TYPE', 'production' === $redirection_mode ? 'production' : 'staging' );
@@ -149,6 +159,11 @@ $provider = new class() implements Provider {
 add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => array_merge( $providers, array( $provider ) ) );
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
+if ( null !== $mailgun_mode ) {
+	include __DIR__ . '/mailgun.php';
+	$sw_mailgate_test_complete = true;
+	exit;
+}
 if ( null !== $redirection_mode ) {
 	include __DIR__ . '/redirection.php';
 	$sw_mailgate_test_complete = true;

@@ -55,4 +55,46 @@ in sent totals. Failed attempts remain `failed`.
 Resend applies the current redirection rules to the stored delivery recipients;
 it never restores addresses from the original-recipient log field.
 
+## Send through Mailgun
+
+Add a **Mailgun** connection under **Mailgate → Connections**. Enter the Mailgun
+sending domain (for example `mg.example.com`), select its US or EU region, and
+provide an API key. Set the connection's From address to a sender permitted for
+that domain. API keys are encrypted in the existing secret store and are never
+printed back into the editor.
+
+The connection test reads domain details and checks that the domain is active;
+it sends no email. The key needs permission to read domain details for this test.
+A sending-only key may permit submission while rejecting that read-only test.
+
+As with SMTP, each field supports an override using the connection ID shown in
+the editor. For a connection whose ID is `primary`, for example:
+
+```php
+define( 'SW_MAILGATE_PRIMARY_DOMAIN', 'mg.example.com' );
+define( 'SW_MAILGATE_PRIMARY_REGION', 'eu' );
+define( 'SW_MAILGATE_PRIMARY_API_KEY', 'your-mailgun-api-key' );
+define( 'SW_MAILGATE_PRIMARY_TIMEOUT', 15 );
+```
+
+Mailgun receives the prepared MIME message, preserving HTML, plain alternatives,
+attachments, sender rules and Reply-To. The explicit API envelope includes To,
+Cc and Bcc; Bcc is omitted from the MIME headers. Redirection is applied before
+the API request. Logging still requires the separate wp-config opt-in above.
+
+Requests use verified HTTPS, fixed regional Mailgun hosts, a 5–60 second timeout
+and no HTTP redirects. Diagnostics include only method, host, HTTP status and
+duration; they omit authentication headers, message content and raw response/error
+text. Successful submissions retain Mailgun's message ID. Authentication failures,
+rate limits, server errors and transport errors follow the existing failover
+classification. A successful HTTP response without a valid message ID stops
+automatic failover because the message may already have been accepted.
+
+The implementation follows Mailgun's current
+[MIME submission API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages-mime)
+(`POST /v3/{domain}/messages.mime`) and
+[domain-details API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/domains/get-v4-domains--name-)
+(`GET /v4/domains/{domain}`). The latter supersedes the v3 path in the original
+milestone plan.
+
 See [tests/README.md](tests/README.md) for validation instructions.

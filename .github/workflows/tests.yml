@@ -75,3 +75,6 @@ jobs:
           php tests/integration.php enabled redirection invalid
           php tests/integration.php enabled redirection invalid-type
           php tests/integration.php enabled redirection production
+          php tests/integration.php enabled mailgun api
+          php tests/integration.php unset mailgun api
+          php tests/integration.php enabled mailgun constant
