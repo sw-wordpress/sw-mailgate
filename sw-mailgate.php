@@ -3,7 +3,7 @@
  * Plugin Name:       SW Mailgate
  * Plugin URI:        https://stefanwarnat.de
  * Description:       Send WordPress mail through SMTP, Mailgun, Google or Microsoft 365 with failover, redirection, logging and DNS checks.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.8
  * Requires PHP:      8.2
  * Author:            Stefan Warnat
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SW_MAILGATE_VERSION', '0.1.0' );
+define( 'SW_MAILGATE_VERSION', '0.2.0' );
 define( 'SW_MAILGATE_FILE', __FILE__ );
 define( 'SW_MAILGATE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SW_MAILGATE_URL', plugin_dir_url( __FILE__ ) );
@@ -66,5 +66,6 @@ $sw_mailgate_loader->addPsr4( 'SWMailgate\\', SW_MAILGATE_DIR . 'src/' );
 unset( $sw_mailgate_autoload, $sw_mailgate_loader );
 
 register_activation_hook( __FILE__, array( \SWMailgate\Installer::class, 'activate' ) );
+register_deactivation_hook( __FILE__, array( \SWMailgate\Installer::class, 'deactivate' ) );
 
 \SWMailgate\Plugin::instance()->boot();

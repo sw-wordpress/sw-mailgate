@@ -19,6 +19,8 @@ use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Providers\Provider;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Send_Result;
+use SWMailgate\Logging\Logger;
+use SWMailgate\Logging\Settings;
 
 final class Dispatcher {
 
@@ -101,6 +103,7 @@ final class Dispatcher {
 		$this->attempts = array();
 		$group          = wp_generate_uuid4();
 		$last           = null;
+		$caller         = Logger::caller();
 
 		foreach ( $this->resolve_chain() as $connection ) {
 			$mailer   = clone $template;
@@ -117,7 +120,11 @@ final class Dispatcher {
 				$result,
 				$mailer->From,
 				( new Envelope( $mailer ) )->recipients(),
-				$mailer->Subject
+				$mailer->Subject,
+				array(),
+				$caller,
+				$this->payload( $mailer ),
+				array_column( $mailer->getReplyToAddresses(), 0 )
 			);
 			$this->attempts[] = $attempt;
 
@@ -153,6 +160,27 @@ final class Dispatcher {
 		}
 		$connection = $this->connections->find( $this->only );
 		return null === $connection ? array() : array( $connection );
+	}
+
+	/** Store only message fields, never SMTP configuration or arbitrary custom headers. */
+	private function payload( Mail_Catcher $mailer ): ?array {
+		$settings = Settings::get();
+		if ( ! $settings['enabled'] || ! $settings['store_body'] || $settings['mask_recipients'] ) {
+			return null;
+		}
+		return array(
+			'to'           => $mailer->getToAddresses(),
+			'cc'           => $mailer->getCcAddresses(),
+			'bcc'          => $mailer->getBccAddresses(),
+			'reply_to'     => array_values( $mailer->getReplyToAddresses() ),
+			'from'         => $mailer->From,
+			'from_name'    => $mailer->FromName,
+			'body'         => $mailer->Body,
+			'alt_body'     => $mailer->AltBody,
+			'content_type' => $mailer->ContentType,
+			'charset'      => $mailer->CharSet,
+			'attachments'  => array() !== $mailer->getAttachments(),
+		);
 	}
 
 	private function attempt( Mail_Catcher $mailer, Connection $connection, Provider $provider ): Send_Result {

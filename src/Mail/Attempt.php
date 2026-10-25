@@ -25,7 +25,11 @@ final class Attempt {
 		public readonly Send_Result $result,
 		public readonly string $from,
 		public readonly array $recipients,
-		public readonly string $subject
+		public readonly string $subject,
+		public readonly array $original_to = array(),
+		public readonly string $caller = 'WordPress',
+		public readonly ?array $payload = null,
+		public readonly array $related_addresses = array()
 	) {
 	}
 }

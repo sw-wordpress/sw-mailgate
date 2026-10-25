@@ -16,6 +16,10 @@ use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Smtp_Provider;
 use SWMailgate\Security\Secret_Store;
+use SWMailgate\Logging\Logger;
+use SWMailgate\Logging\Log_Repository;
+use SWMailgate\Logging\Privacy;
+use SWMailgate\Admin\Log_Page;
 
 final class Plugin {
 
@@ -38,6 +42,10 @@ final class Plugin {
 		$connections      = new Connection_Repository( $secrets );
 		$providers        = new Provider_Registry( array( new Smtp_Provider() ) );
 		$this->dispatcher = new Dispatcher( $connections, $providers );
+		$logs             = new Log_Repository();
+		( new Logger( $logs ) )->register();
+		( new Privacy( $logs ) )->register();
+		add_action( 'init', array( Logger::class, 'schedule' ) );
 
 		// Late, so the catcher wins over plugins that also replace PHPMailer during plugins_loaded.
 		add_action( 'plugins_loaded', array( $this, 'install_mailer' ), PHP_INT_MAX );
@@ -46,6 +54,7 @@ final class Plugin {
 
 		if ( is_admin() ) {
 			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher ) )->register();
+			( new Log_Page( $logs, $connections ) )->register();
 		}
 	}
 
