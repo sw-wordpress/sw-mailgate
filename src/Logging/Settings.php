@@ -1,6 +1,6 @@
 <?php
 /**
- * Log preferences. Message content is opt-in.
+ * Log preferences. Logging requires explicit wp-config.php authorization.
  *
  * @package SWMailgate
  */
@@ -16,12 +16,13 @@ final class Settings {
 	public static function get(): array {
 		return array_merge(
 			array(
-				'enabled'         => true,
 				'store_body'      => false,
 				'retention'       => 30,
 				'mask_recipients' => false,
 			),
-			(array) get_option( self::OPTION, array() )
+			(array) get_option( self::OPTION, array() ),
+			// Stored options and submitted form values must never enable logging.
+			array( 'enabled' => defined( 'SW_MAILGATE_LOG_ENABLED' ) && true === SW_MAILGATE_LOG_ENABLED )
 		);
 	}
 
@@ -29,7 +30,6 @@ final class Settings {
 		update_option(
 			self::OPTION,
 			array(
-				'enabled'         => ! empty( $values['enabled'] ),
 				'store_body'      => ! empty( $values['store_body'] ),
 				'retention'       => max( 1, min( 3650, (int) ( $values['retention'] ?? 30 ) ) ),
 				'mask_recipients' => ! empty( $values['mask_recipients'] ),

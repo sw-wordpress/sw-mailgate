@@ -88,7 +88,6 @@ final class Log_Page {
 		check_admin_referer( 'sw_mailgate_save_settings' );
 		Settings::save(
 			array(
-				'enabled'         => isset( $_POST['enabled'] ),
 				'store_body'      => isset( $_POST['store_body'] ),
 				'mask_recipients' => isset( $_POST['mask_recipients'] ),
 				'retention'       => isset( $_POST['retention'] ) ? absint( $_POST['retention'] ) : 30,

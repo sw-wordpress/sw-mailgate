@@ -30,6 +30,27 @@ use SWMailgate\Providers\Provider;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Security\Secret_Store;
 
+// PHP constants are immutable: exercise each configuration in a separate process.
+$logging_mode = $argv[1] ?? 'enabled';
+switch ( $logging_mode ) {
+	case 'enabled':
+		define( 'SW_MAILGATE_LOG_ENABLED', true );
+		break;
+	case 'disabled':
+		define( 'SW_MAILGATE_LOG_ENABLED', false );
+		break;
+	case 'string':
+		define( 'SW_MAILGATE_LOG_ENABLED', 'true' );
+		break;
+	case 'integer':
+		define( 'SW_MAILGATE_LOG_ENABLED', 1 );
+		break;
+	case 'unset':
+		break;
+	default:
+		throw new InvalidArgumentException( 'Expected enabled, disabled, unset, string or integer.' );
+}
+
 define( 'ABSPATH', rtrim( getenv( 'WP_ROOT' ) ?: '/tmp/wordpress', '/' ) . '/' );
 define( 'DB_NAME', getenv( 'WP_DB_NAME' ) ?: 'mailgate_test' );
 define( 'DB_USER', getenv( 'WP_DB_USER' ) ?: 'root' );
@@ -110,6 +131,30 @@ $provider = new class() implements Provider {
 add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => array_merge( $providers, array( $provider ) ) );
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
+if ( 'enabled' !== $logging_mode ) {
+	update_option( Settings::OPTION, array( 'enabled' => true, 'store_body' => true ) );
+	sw_mailgate_check( false === Settings::get()['enabled'], 'Stored settings cannot enable logging (' . $logging_mode . ').' );
+	$attempts = array();
+	add_action( 'sw_mailgate_attempt', static function ( $attempt ) use ( &$attempts ): void { $attempts[] = $attempt; } );
+	sw_mailgate_check( wp_mail( 'user@example.test', 'Logging disabled', 'Do not retain', $headers ), 'Delivery succeeds with logging disabled.' );
+	sw_mailgate_check( 0 === $logs->count() && 2 === count( $attempts ) && null === $attempts[0]->payload && null === $attempts[1]->payload, 'Disabled logging writes no rows and captures no bodies.' );
+	Settings::save( array( 'enabled' => true, 'store_body' => true, 'retention' => 30 ) );
+	sw_mailgate_check( ! array_key_exists( 'enabled', get_option( Settings::OPTION ) ) && ! Settings::get()['enabled'], 'Saving preferences cannot enable logging.' );
+	wp_mail( 'user@example.test', 'Still disabled', 'Do not retain', $headers );
+	sw_mailgate_check( 0 === $logs->count(), 'Submitted enabled values cannot bypass wp-config.php.' );
+	$page = new Log_Page( $logs, $connections );
+	ob_start();
+	$page->settings();
+	$html = ob_get_clean();
+	sw_mailgate_check( ! str_contains( $html, 'name="enabled"' ) && str_contains( $html, 'SW_MAILGATE_LOG_ENABLED' ), 'Settings show configuration instructions without an enable control.' );
+	update_option( Installer::DELETE_DATA_OPTION, true );
+	Installer::uninstall();
+	$sw_mailgate_test_complete = true;
+	echo 'PASS: Logging configuration (' . $logging_mode . ').' . PHP_EOL;
+	exit;
+}
+update_option( Settings::OPTION, array( 'enabled' => false ) );
+sw_mailgate_check( true === Settings::get()['enabled'], 'Only the explicit boolean true constant enables logging; stale options are ignored.' );
 sw_mailgate_check( wp_mail( 'user@example.test', 'First mail', '<b>Private body</b>', $headers ), 'Failover delivers successfully.' );
 $rows = $logs->search();
 sw_mailgate_check( 2 === count( $rows ) && 'sent' === $rows[0]['status'] && 'failed' === $rows[1]['status'], 'All connection attempts are logged in order.' );
@@ -123,7 +168,7 @@ sw_mailgate_check( ! wp_mail( 'user@example.test', 'Permanent failure', 'Body' )
 sw_mailgate_check( 3 === $logs->count() && array( 'sent' => 1, 'failed' => 1 ) === $logs->totals( 30 ), 'Failed messages are counted once.' );
 $provider->mode = 'failover';
 
-Settings::save( array( 'enabled' => true, 'store_body' => true, 'retention' => 30 ) );
+Settings::save( array( 'store_body' => true, 'retention' => 30 ) );
 wp_mail( 'user@example.test', 'Stored mail', '<b>Stored body</b>', $headers );
 $stored = $logs->search()[0];
 $payload = json_decode( $stored['payload'], true );
@@ -140,7 +185,7 @@ try {
 	sw_mailgate_check( true, 'Resend without stored content is rejected.' );
 }
 
-Settings::save( array( 'enabled' => true, 'store_body' => true, 'mask_recipients' => true, 'retention' => 30 ) );
+Settings::save( array( 'store_body' => true, 'mask_recipients' => true, 'retention' => 30 ) );
 wp_mail( 'masked@example.test', 'Contact masked@example.test', 'Never retain this body', array( 'Bcc: hidden@example.test' ) );
 $masked = $logs->search()[0];
 sw_mailgate_check( null === $masked['payload'] && ! str_contains( wp_json_encode( $masked ), '@example.test' ), 'Masking redacts metadata and suppresses content storage.' );
@@ -167,11 +212,10 @@ sw_mailgate_check( ! $erase_first['done'] && ! $erase_second['done'] && $erase_l
 
 $before = $logs->count();
 Settings::save( array( 'enabled' => false, 'retention' => 30 ) );
-wp_mail( 'user@example.test', 'Disabled log', 'Body' );
-sw_mailgate_check( $before === $logs->count(), 'Logging can be disabled without stopping delivery.' );
+sw_mailgate_check( Settings::get()['enabled'] && ! array_key_exists( 'enabled', get_option( Settings::OPTION ) ), 'Database preferences cannot override the wp-config.php constant.' );
 $wpdb->update( Log_Repository::table(), array( 'created_at' => gmdate( 'Y-m-d H:i:s', time() - 31 * DAY_IN_SECONDS ) ), array( 'id' => $stored['id'] ) );
 do_action( Logger::CRON_HOOK );
-sw_mailgate_check( null === $logs->find( (int) $stored['id'] ) && $before - 1 === $logs->count(), 'Retention removes expired entries even when logging is disabled.' );
+sw_mailgate_check( null === $logs->find( (int) $stored['id'] ) && $before - 1 === $logs->count(), 'Retention removes expired entries.' );
 
 sw_mailgate_check( 1 === $logs->count( array( 'status' => 'sent', 's' => 'First mail', 'date_from' => gmdate( 'Y-m-d' ), 'date_to' => gmdate( 'Y-m-d' ) ) ), 'Status, search and UTC date filters combine correctly.' );
 sw_mailgate_check( 0 === $logs->count( array( 'connection_id' => "' OR 1=1 --" ) ), 'Query filters escape SQL input.' );
@@ -210,7 +254,7 @@ try {
 }
 remove_filter( 'wp_die_handler', $die_handler );
 
-Settings::save( array( 'enabled' => true ) );
+Settings::save( array() );
 $wpdb->query( $wpdb->prepare( 'DROP TABLE %i', Log_Repository::table() ) );
 ob_start();
 $sent = wp_mail( 'user@example.test', 'Broken log database', 'Body' );

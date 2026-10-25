@@ -62,4 +62,9 @@ jobs:
         env:
           WP_ROOT: /tmp/wordpress
           WP_DB_HOST: 127.0.0.1:3306
-        run: php tests/integration.php
+        run: |
+          php tests/integration.php unset
+          php tests/integration.php disabled
+          php tests/integration.php string
+          php tests/integration.php integer
+          php tests/integration.php enabled

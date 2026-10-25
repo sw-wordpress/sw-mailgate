@@ -38,7 +38,7 @@ Legend: `[x]` done · `[ ]` open · **(M)** milestone release
 - [x] Table `{prefix}sw_mailgate_log` via `dbDelta` (bump `Installer::DB_VERSION`)
   - status, connection, provider, attempt group/number, from, to, original_to, subject, error class/message, duration, provider message ID, caller
 - [x] `Logger` listens to `sw_mailgate_attempt`; must never break sending (try/catch)
-- [x] Settings: logging on/off, store body (default **off**), retention in days, mask recipient addresses
+- [x] Logging off by default; enable only with `SW_MAILGATE_LOG_ENABLED` set to boolean `true` in wp-config.php. Admin settings control body storage (default **off**), retention and address masking.
 - [x] Daily retention cron
 - [x] Log page: `WP_List_Table` with filters (status, connection, date range), search, detail view with all attempts, CSV export
 - [x] Resend (only when the body is stored; unavailable for attachments, which are not retained)
@@ -46,7 +46,8 @@ Legend: `[x]` done · `[ ]` open · **(M)** milestone release
 - [x] Dashboard widget: sent / failed (later: bounce rate) for 7 and 30 days
 - [x] Record the caller (plugin/theme from the backtrace)
 
-M2 notes: masking suppresses body storage and only affects new entries. Privacy lookup
+M2 notes: logging cannot be enabled through the admin UI or stored options. Masking
+suppresses body storage and only affects new entries. Privacy lookup
 uses keyed address hashes (including Bcc and Reply-To); export omits content and other
 recipients. Dashboard totals count the final attempt per message using retained logs.
 Integration tests and supported-version CI are documented in `tests/README.md`.

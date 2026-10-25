@@ -103,7 +103,7 @@ final class Dispatcher {
 		$this->attempts = array();
 		$group          = wp_generate_uuid4();
 		$last           = null;
-		$caller         = Logger::caller();
+		$caller         = Settings::get()['enabled'] ? Logger::caller() : 'WordPress';
 
 		foreach ( $this->resolve_chain() as $connection ) {
 			$mailer   = clone $template;
