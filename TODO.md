@@ -28,23 +28,29 @@ Legend: `[x]` done · `[ ]` open · **(M)** milestone release
 - [ ] Move the smoke test into `tests/` as PHPUnit integration tests (`tests/bootstrap.php` exists)
 - [ ] Detect other mailer plugins (e.g. WP Mail SMTP) that also replace `$phpmailer` and show an admin notice
 - [ ] German translation (`languages/sw-mailgate-de_DE.po/.mo`); load `de_DE.mo` explicitly for `de_DE_formal` (WP 7.1 just-in-time loading does not fall back)
-- [ ] Settings page: "delete data on uninstall" (`sw_mailgate_delete_data`)
-- [ ] Verify the Mozart loader path in release builds (`vendor-prefixed/autoload.php` + `addPsr4`)
+- [x] Settings page: "delete data on uninstall" (`sw_mailgate_delete_data`)
+- [x] Verify the Mozart loader path in release builds (`vendor-prefixed/autoload.php` + `addPsr4`)
 
 ---
 
 ## M2 – Log & analytics (0.2.0)
 
-- [ ] Table `{prefix}sw_mailgate_log` via `dbDelta` (bump `Installer::DB_VERSION`)
+- [x] Table `{prefix}sw_mailgate_log` via `dbDelta` (bump `Installer::DB_VERSION`)
   - status, connection, provider, attempt group/number, from, to, original_to, subject, error class/message, duration, provider message ID, caller
-- [ ] `Logger` listens to `sw_mailgate_attempt`; must never break sending (try/catch)
-- [ ] Settings: logging on/off, store body (default **off**), retention in days, mask recipient addresses
-- [ ] Daily retention cron
-- [ ] Log page: `WP_List_Table` with filters (status, connection, date range), search, detail view with all attempts, CSV export
-- [ ] Resend (only when the body is stored)
-- [ ] Privacy exporter/eraser (`wp_privacy_personal_data_exporters` / `_erasers`)
-- [ ] Dashboard widget: sent / failed (later: bounce rate) for 7 and 30 days
-- [ ] Record the caller (plugin/theme from the backtrace)
+- [x] `Logger` listens to `sw_mailgate_attempt`; must never break sending (try/catch)
+- [x] Logging off by default; enable only with `SW_MAILGATE_LOG_ENABLED` set to boolean `true` in wp-config.php. Admin settings control body storage (default **off**), retention and address masking.
+- [x] Daily retention cron
+- [x] Log page: `WP_List_Table` with filters (status, connection, date range), search, detail view with all attempts, CSV export
+- [x] Resend (only when the body is stored; unavailable for attachments, which are not retained)
+- [x] Privacy exporter/eraser (`wp_privacy_personal_data_exporters` / `_erasers`)
+- [x] Dashboard widget: sent / failed (later: bounce rate) for 7 and 30 days
+- [x] Record the caller (plugin/theme from the backtrace)
+
+M2 notes: logging cannot be enabled through the admin UI or stored options. Masking
+suppresses body storage and only affects new entries. Privacy lookup
+uses keyed address hashes (including Bcc and Reply-To); export omits content and other
+recipients. Dashboard totals count the final attempt per message using retained logs.
+Integration tests and supported-version CI are documented in `tests/README.md`.
 
 ## M3 – Redirection (0.3.0)
 

@@ -22,6 +22,7 @@ $sw_mailgate_test_options = array(
 	'sw_mailgate_connections' => array( 'smtp' => array( 'enabled' => true ) ),
 	'sw_mailgate_secrets'     => array( 'smtp_password' => 'encrypted-test-secret' ),
 	'sw_mailgate_db_version'  => 1,
+	'sw_mailgate_logging'     => array( 'enabled' => true ),
 	'unrelated_option'       => 'keep',
 );
 if ( 'default' !== $sw_mailgate_test_mode ) {
@@ -50,7 +51,34 @@ function wp_roles(): object {
 	return (object) array( 'role_objects' => array( $GLOBALS['sw_mailgate_test_role'] ) );
 }
 
+function wp_clear_scheduled_hook( string $hook ): void {
+	$GLOBALS['sw_mailgate_test_cleared_hook'] = $hook;
+}
+
+$wpdb = new class() {
+	public string $prefix = 'wp_';
+	public bool $dropped = false;
+
+	public function prepare( string $query, string $table ): string {
+		if ( 'wp_sw_mailgate_log' !== $table ) {
+			throw new RuntimeException( 'Unexpected table.' );
+		}
+		return str_replace( '%i', '`' . $table . '`', $query );
+	}
+
+	public function query( string $query ): void {
+		if ( 'DROP TABLE IF EXISTS `wp_sw_mailgate_log`' !== $query ) {
+			throw new RuntimeException( 'Unexpected uninstall query.' );
+		}
+		$this->dropped = true;
+	}
+};
+
 require $sw_mailgate_test_root . '/uninstall.php';
+
+if ( $wpdb->dropped !== ( 'delete' === $sw_mailgate_test_mode ) || 'sw_mailgate_log_retention' !== $sw_mailgate_test_cleared_hook ) {
+	throw new RuntimeException( 'Uninstall did not handle the log table and cron correctly.' );
+}
 
 $sw_mailgate_test_expected = 'delete' === $sw_mailgate_test_mode
 	? array( 'unrelated_option' => 'keep' )

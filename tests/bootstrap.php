@@ -30,6 +30,10 @@ function register_activation_hook( string $file, mixed $callback ): void {
 	$GLOBALS['test_activation'] = $callback;
 }
 
+function register_deactivation_hook( string $file, mixed $callback ): void {
+	$GLOBALS['test_deactivation'] = $callback;
+}
+
 function is_admin(): bool {
 	return true;
 }
@@ -41,7 +45,7 @@ if ( ! class_exists( \SWMailgate\Plugin::class ) || ! is_callable( $GLOBALS['tes
 	throw new RuntimeException( 'Plugin classes or activation callback could not be loaded.' );
 }
 
-foreach ( array( 'init', 'plugins_loaded', 'admin_menu', 'admin_post_sw_mailgate_send_test' ) as $sw_mailgate_test_hook ) {
+foreach ( array( 'init', 'plugins_loaded', 'admin_menu', 'admin_post_sw_mailgate_send_test', 'sw_mailgate_attempt', 'sw_mailgate_log_retention', 'admin_post_sw_mailgate_export_log', 'admin_post_sw_mailgate_resend', 'admin_post_sw_mailgate_save_settings' ) as $sw_mailgate_test_hook ) {
 	if ( empty( $GLOBALS['test_actions'][ $sw_mailgate_test_hook ] ) ) {
 		throw new RuntimeException( 'Plugin hook was not registered: ' . $sw_mailgate_test_hook );
 	}

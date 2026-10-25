@@ -1,0 +1,70 @@
+name: Tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            wordpress: '6.8'
+          - php: '8.2'
+            wordpress: latest
+          - php: '8.4'
+            wordpress: latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: mailgate_test
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, sodium
+          tools: composer:v2
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: composer validate --strict
+      - run: composer cs
+      - name: Bootstrap and uninstall regression tests
+        run: |
+          php tests/bootstrap.php
+          php tests/uninstall.php . delete
+          php tests/uninstall.php . preserve
+          php tests/uninstall.php . default
+      - name: Install WordPress test files
+        env:
+          WP_VERSION: ${{ matrix.wordpress }}
+        run: |
+          if [ "$WP_VERSION" = latest ]; then
+            curl --fail --location --retry 3 https://wordpress.org/latest.tar.gz -o /tmp/wordpress.tar.gz
+          else
+            curl --fail --location --retry 3 "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o /tmp/wordpress.tar.gz
+          fi
+          tar -xzf /tmp/wordpress.tar.gz -C /tmp
+      - name: WordPress and MariaDB integration
+        env:
+          WP_ROOT: /tmp/wordpress
+          WP_DB_HOST: 127.0.0.1:3306
+        run: |
+          php tests/integration.php unset
+          php tests/integration.php disabled
+          php tests/integration.php string
+          php tests/integration.php integer
+          php tests/integration.php enabled
