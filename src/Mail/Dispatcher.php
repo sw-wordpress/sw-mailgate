@@ -56,6 +56,7 @@ final class Dispatcher {
 	 */
 	public function begin_mail( $atts ) {
 		$this->substituted_from = null;
+		$this->attempts         = array();
 		return $atts;
 	}
 
@@ -99,7 +100,7 @@ final class Dispatcher {
 	/**
 	 * @throws Exception When no connection delivered the message.
 	 */
-	public function dispatch( Mail_Catcher $template ): bool {
+	public function dispatch( Mail_Catcher $template, array $original_to = array() ): bool {
 		$this->attempts = array();
 		$group          = wp_generate_uuid4();
 		$last           = null;
@@ -121,7 +122,7 @@ final class Dispatcher {
 				$mailer->From,
 				( new Envelope( $mailer ) )->recipients(),
 				$mailer->Subject,
-				array(),
+				$original_to,
 				$caller,
 				$this->payload( $mailer ),
 				array_column( $mailer->getReplyToAddresses(), 0 )

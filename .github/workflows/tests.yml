@@ -68,3 +68,10 @@ jobs:
           php tests/integration.php string
           php tests/integration.php integer
           php tests/integration.php enabled
+          php tests/integration.php enabled redirection ui
+          php tests/integration.php unset redirection ui
+          php tests/integration.php enabled redirection constant
+          php tests/integration.php enabled redirection empty
+          php tests/integration.php enabled redirection invalid
+          php tests/integration.php enabled redirection invalid-type
+          php tests/integration.php enabled redirection production

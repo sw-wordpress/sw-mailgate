@@ -14,6 +14,7 @@ use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Installer;
 use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Logging\Settings;
+use SWMailgate\Mail\Redirection_Settings;
 
 final class Log_Page {
 
@@ -29,6 +30,7 @@ final class Log_Page {
 		add_action( 'admin_post_sw_mailgate_export_log', array( $this, 'export' ) );
 		add_action( 'admin_post_sw_mailgate_resend', array( $this, 'resend' ) );
 		add_action( 'wp_dashboard_setup', array( $this, 'dashboard' ) );
+		add_action( 'admin_notices', array( $this, 'redirection_notice' ) );
 	}
 
 	public function menu(): void {
@@ -49,7 +51,7 @@ final class Log_Page {
 			$filters[ $key ] = isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
 		}
 		// phpcs:enable
-		if ( ! in_array( $filters['status'], array( 'sent', 'failed' ), true ) ) {
+		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected' ), true ) ) {
 			$filters['status'] = '';
 		}
 		return $filters;
@@ -80,12 +82,24 @@ final class Log_Page {
 		$this->authorize();
 		$settings    = Settings::get();
 		$delete_data = (bool) get_option( Installer::DELETE_DATA_OPTION );
+		$redirection = Redirection_Settings::get();
 		include SW_MAILGATE_DIR . 'templates/admin/settings.php';
 	}
 
 	public function save_settings(): void {
 		$this->authorize();
 		check_admin_referer( 'sw_mailgate_save_settings' );
+		if ( ( isset( $_POST['redirect_to'] ) && ! is_string( $_POST['redirect_to'] ) ) || ( isset( $_POST['redirect_allowlist'] ) && ! is_string( $_POST['redirect_allowlist'] ) ) ) {
+			wp_die( esc_html__( 'Invalid redirection settings.', 'sw-mailgate' ) );
+		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Redirection_Settings validates every complete address/domain and rejects invalid input without coercion.
+		$target = isset( $_POST['redirect_to'] ) && is_string( $_POST['redirect_to'] ) ? trim( wp_unslash( $_POST['redirect_to'] ) ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Every rule is validated by Redirection_Settings::save().
+		$allowlist = isset( $_POST['redirect_allowlist'] ) && is_string( $_POST['redirect_allowlist'] ) ? wp_unslash( $_POST['redirect_allowlist'] ) : '';
+		$error     = Redirection_Settings::save( $target, $allowlist );
+		if ( null !== $error ) {
+			wp_die( esc_html( $error->get_error_message() ) );
+		}
 		Settings::save(
 			array(
 				'store_body'      => isset( $_POST['store_body'] ),
@@ -96,6 +110,18 @@ final class Log_Page {
 		update_option( Installer::DELETE_DATA_OPTION, isset( $_POST['delete_data'] ), false );
 		wp_safe_redirect( Admin_Page::url( array( 'saved' => '1' ), self::SETTINGS_SLUG ) );
 		exit;
+	}
+
+	public function redirection_notice(): void {
+		if ( ! current_user_can( Capabilities::MANAGE ) ) {
+			return;
+		}
+		$settings = Redirection_Settings::get();
+		if ( ! $settings['valid'] ) {
+			echo '<div class="notice notice-error"><p>' . esc_html__( 'SW Mailgate: the redirection address is invalid. Mail sending is blocked until the configuration is corrected.', 'sw-mailgate' ) . '</p></div>';
+		} elseif ( 'production' !== wp_get_environment_type() && '' === $settings['target'] ) {
+			echo '<div class="notice notice-warning"><p>' . esc_html__( 'SW Mailgate: this is a non-production site and mail redirection is disabled. Emails will reach their real recipients.', 'sw-mailgate' ) . '</p></div>';
+		}
 	}
 
 	/** Prefix cells that spreadsheet software could interpret as formulas. */

@@ -39,3 +39,22 @@ current WordPress with PHP 8.2/8.4.
 
 Set `SW_MAILGATE_TEST_PLUGIN` to test a staged release directory instead of the
 source checkout.
+
+M3 redirection scenarios use the same isolated database and WordPress bootstrap:
+
+```sh
+php tests/integration.php enabled redirection ui
+php tests/integration.php unset redirection ui
+php tests/integration.php enabled redirection constant
+php tests/integration.php enabled redirection empty
+php tests/integration.php enabled redirection invalid
+php tests/integration.php enabled redirection invalid-type
+php tests/integration.php enabled redirection production
+```
+
+Use the same `WP_ROOT` / `WP_DB_*` environment variables as above. These scenarios
+cover mixed To/Cc/Bcc allowlists, exact domain matching, Bcc header confidentiality,
+deferred recipients, failover, native SMTP without configured connections, scoped
+test-form bypass and cleanup, forced/disabled/invalid configuration, staging notices,
+redirected log status and privacy lookup, masking, resend, settings validation, and
+uninstall. SMTP is an in-memory test double; these tests do not connect to a server.

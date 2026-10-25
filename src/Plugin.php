@@ -20,12 +20,14 @@ use SWMailgate\Logging\Logger;
 use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Logging\Privacy;
 use SWMailgate\Admin\Log_Page;
+use SWMailgate\Mail\Redirector;
 
 final class Plugin {
 
 	private static ?Plugin $instance = null;
 
 	private Dispatcher $dispatcher;
+	private Redirector $redirector;
 
 	public static function instance(): self {
 		if ( null === self::$instance ) {
@@ -42,6 +44,7 @@ final class Plugin {
 		$connections      = new Connection_Repository( $secrets );
 		$providers        = new Provider_Registry( array( new Smtp_Provider() ) );
 		$this->dispatcher = new Dispatcher( $connections, $providers );
+		$this->redirector = new Redirector();
 		$logs             = new Log_Repository();
 		( new Logger( $logs ) )->register();
 		( new Privacy( $logs ) )->register();
@@ -53,7 +56,7 @@ final class Plugin {
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
-			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher ) )->register();
+			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector ) )->register();
 			( new Log_Page( $logs, $connections ) )->register();
 		}
 	}
@@ -80,6 +83,7 @@ final class Plugin {
 
 		$catcher = new Mail_Catcher( true );
 		$catcher->set_dispatcher( $this->dispatcher );
+		$catcher->set_redirector( $this->redirector );
 		$catcher::$validator = static function ( $email ) {
 			return (bool) is_email( $email );
 		};

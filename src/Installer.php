@@ -14,6 +14,7 @@ use SWMailgate\Security\Secret_Store;
 use SWMailgate\Logging\Logger;
 use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Logging\Settings;
+use SWMailgate\Mail\Redirection_Settings;
 
 final class Installer {
 
@@ -100,6 +101,7 @@ final class Installer {
 		delete_option( self::VERSION_OPTION );
 		delete_option( self::DELETE_DATA_OPTION );
 		delete_option( Settings::OPTION );
+		delete_option( Redirection_Settings::OPTION );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Remove the owned table only after the user enabled data deletion.
 		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', Log_Repository::table() ) );
 	}
