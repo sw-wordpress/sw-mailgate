@@ -55,7 +55,11 @@ jobs:
             --optimize-autoloader
 
       - name: Smoke-test source checkout
-        run: php tests/bootstrap.php
+        run: |
+          php tests/bootstrap.php
+          php tests/uninstall.php . delete
+          php tests/uninstall.php . preserve
+          php tests/uninstall.php . default
 
       - name: Isolate dependencies with Mozart
         run: |
@@ -116,6 +120,16 @@ jobs:
             echo "Unexpected development or unprefixed vendor files in ZIP" >&2
             exit 1
           fi
+
+      - name: Smoke-test uninstall from release ZIP
+        env:
+          ZIP_FILE: ${{ steps.metadata.outputs.zip }}
+        run: |
+          EXTRACTED="$RUNNER_TEMP/uninstall-release"
+          unzip -q "$ZIP_FILE" -d "$EXTRACTED"
+          php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" delete
+          php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" preserve
+          php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" default
 
       - name: Create release and attach ZIP
         uses: softprops/action-gh-release@v2
