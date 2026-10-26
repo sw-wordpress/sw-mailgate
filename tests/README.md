@@ -76,6 +76,16 @@ wp-config overrides, TLS/timeouts/redirect settings, HTTP and transport failure
 classification, ambiguous successful responses, safe diagnostics, redirection,
 admin fields/test actions, logging opt-in and uninstall cleanup.
 
+Issue #10's opaque secret regression:
+
+    php tests/integration.php enabled issues secrets
+
+Use the disposable WordPress/database configuration above. It exercises real
+slashed form submissions, encrypted storage and SMTP credential retrieval for
+spaces, tabs, whitespace-only values, quotes, backslashes and opaque bytes. It
+also checks empty-field retention, explicit deletion/replacement and Mailgun's
+rejection of invalid API keys without silently changing their stored bytes.
+
 Issue #6, #12 and #13 regressions:
 
 ```sh

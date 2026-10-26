@@ -57,8 +57,8 @@ final class Field {
 			self::NUMBER   => (string) absint( $value ),
 			self::EMAIL    => sanitize_email( $value ),
 			self::SELECT   => array_key_exists( $value, $this->options ) ? $value : $this->default,
-			// Secrets are opaque: only strip line breaks, never alter other characters.
-			self::PASSWORD => trim( str_replace( array( "\r", "\n" ), '', $value ) ),
+			// Secrets are opaque: preserve every byte after the form handler's wp_unslash().
+			self::PASSWORD => $value,
 			default        => sanitize_text_field( $value ),
 		};
 	}

@@ -82,5 +82,6 @@ jobs:
           php tests/integration.php enabled issues smtp
           php tests/integration.php enabled issues editor
           php tests/integration.php enabled issues editor-false
+          php tests/integration.php enabled issues secrets
           php tests/integration.php enabled multisite setup
           php tests/integration.php enabled multisite run
