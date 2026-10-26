@@ -139,6 +139,7 @@ final class Mailgun_Provider implements Provider {
 			429 === $status => __( 'Mailgun rate limit reached. Try again later.', 'sw-mailgate' ),
 			default => sprintf( /* translators: %d: HTTP status code */ __( 'Mailgun request failed (HTTP %d).', 'sw-mailgate' ), $status ),
 		};
-		return Send_Result::failure( Send_Result::class_for_http_status( $status ), $message, $response['debug'] )->with_duration( $response['duration'] );
+		$result = Send_Result::failure( Send_Result::class_for_http_status( $status ), $message, $response['debug'] )->with_duration( $response['duration'] );
+		return empty( $response['ambiguous'] ) ? $result : $result->as_ambiguous();
 	}
 }

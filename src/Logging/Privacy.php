@@ -9,9 +9,11 @@ declare(strict_types=1);
 
 namespace SWMailgate\Logging;
 
+use SWMailgate\Routing\Retry_Queue;
+
 final class Privacy {
 
-	public function __construct( private readonly Log_Repository $logs ) {
+	public function __construct( private readonly Log_Repository $logs, private readonly ?Retry_Queue $queue = null ) {
 	}
 
 	public function register(): void {
@@ -67,7 +69,7 @@ final class Privacy {
 	public function erase( string $email, int $page = 1 ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required WordPress callback signature.
 		// Deletion changes the result set, so always take the first batch.
 		$rows     = $this->logs->personal( $email );
-		$removed  = false;
+		$removed  = null !== $this->queue && $this->queue->erase_address( $email ) > 0;
 		$retained = false;
 		foreach ( $rows as $row ) {
 			if ( $this->logs->delete( (int) $row['id'] ) ) {

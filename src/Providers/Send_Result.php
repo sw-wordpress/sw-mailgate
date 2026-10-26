@@ -30,7 +30,8 @@ final class Send_Result {
 		private readonly string $message,
 		private readonly string $provider_message_id,
 		private readonly array $debug,
-		private readonly float $duration = 0.0
+		private readonly float $duration = 0.0,
+		private readonly bool $ambiguous = false
 	) {
 	}
 
@@ -60,7 +61,23 @@ final class Send_Result {
 	}
 
 	public function with_duration( float $seconds ): self {
-		return new self( $this->success, $this->error_class, $this->message, $this->provider_message_id, $this->debug, $seconds );
+		return new self( $this->success, $this->error_class, $this->message, $this->provider_message_id, $this->debug, $seconds, $this->ambiguous );
+	}
+
+	/**
+	 * Marks a failure after which the provider may already have accepted the message (e.g. a timeout
+	 * while waiting for the HTTP response). The dispatcher decides whether failover is still allowed.
+	 */
+	public function as_ambiguous(): self {
+		return new self( $this->success, $this->error_class, $this->message, $this->provider_message_id, $this->debug, $this->duration, true );
+	}
+
+	public function is_ambiguous(): bool {
+		return $this->ambiguous;
+	}
+
+	public function reclassify( string $error_class, string $message ): self {
+		return new self( $this->success, $error_class, $message, $this->provider_message_id, $this->debug, $this->duration, $this->ambiguous );
 	}
 
 	public function is_success(): bool {

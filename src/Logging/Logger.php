@@ -42,9 +42,7 @@ final class Logger {
 			$redact    = static fn( string $text ): string => $mask ? self::mask( $text ) : $text;
 			$row       = array(
 				'created_at'          => gmdate( 'Y-m-d H:i:s' ),
-				'status'              => $attempt->result->is_success()
-					? ( array() !== $attempt->original_to ? 'redirected' : 'sent' )
-					: ( in_array( $attempt->result->error_class(), array( 'partial', 'uncertain' ), true ) ? $attempt->result->error_class() : 'failed' ),
+				'status'              => self::status( $attempt ),
 				'connection_id'       => $attempt->connection->id(),
 				'provider'            => $attempt->connection->provider(),
 				'attempt_group'       => $attempt->group,
@@ -72,6 +70,16 @@ final class Logger {
 				$wpdb->suppress_errors( $previous );
 			}
 		}
+	}
+
+	private static function status( Attempt $attempt ): string {
+		if ( $attempt->result->is_success() ) {
+			return array() !== $attempt->original_to ? 'redirected' : 'sent';
+		}
+		if ( $attempt->queued ) {
+			return 'queued';
+		}
+		return in_array( $attempt->result->error_class(), array( 'partial', 'uncertain' ), true ) ? $attempt->result->error_class() : 'failed';
 	}
 
 	public static function mask( string $text ): string {

@@ -47,28 +47,33 @@ function restore_current_blog(): void {
 function get_option( string $key, mixed $default = false ): mixed { return $GLOBALS['sw_mailgate_options'][ $GLOBALS['sw_mailgate_site'] ][ $key ] ?? $default; }
 function delete_option( string $key ): void { unset( $GLOBALS['sw_mailgate_options'][ $GLOBALS['sw_mailgate_site'] ][ $key ] ); }
 function wp_clear_scheduled_hook( string $hook ): void {
-	if ( 'sw_mailgate_log_retention' !== $hook ) { throw new RuntimeException( 'Unexpected cron hook.' ); }
-	$GLOBALS['sw_mailgate_cleared'][] = $GLOBALS['sw_mailgate_site'];
+	if ( ! in_array( $hook, array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue' ), true ) ) { throw new RuntimeException( 'Unexpected cron hook.' ); }
+	$GLOBALS['sw_mailgate_cleared'][ $hook ][] = $GLOBALS['sw_mailgate_site'];
 }
 function wp_roles(): object { return (object) array( 'role_objects' => array( $GLOBALS['sw_mailgate_roles'][ $GLOBALS['sw_mailgate_site'] ] ) ); }
 $wpdb = new class() {
 	public string $prefix = 'wp_7_';
 	public array $dropped = array();
+	public array $dropped_queue = array();
 	public function prepare( string $sql, string $table ): string {
-		if ( $this->prefix . 'sw_mailgate_log' !== $table ) { throw new RuntimeException( 'Wrong table context.' ); }
+		if ( ! in_array( $table, array( $this->prefix . 'sw_mailgate_log', $this->prefix . 'sw_mailgate_queue' ), true ) ) { throw new RuntimeException( 'Wrong table context.' ); }
 		return str_replace( '%i', '`' . $table . '`', $sql );
 	}
 	public function query( string $sql ): void {
+		if ( 'DROP TABLE IF EXISTS `' . $this->prefix . 'sw_mailgate_queue`' === $sql ) {
+			$this->dropped_queue[] = $GLOBALS['sw_mailgate_site'];
+			return;
+		}
 		if ( 'DROP TABLE IF EXISTS `' . $this->prefix . 'sw_mailgate_log`' !== $sql ) { throw new RuntimeException( 'Wrong cleanup query.' ); }
 		$this->dropped[] = $GLOBALS['sw_mailgate_site'];
 	}
 };
 require ( $argv[1] ?? dirname( __DIR__ ) ) . '/uninstall.php';
-if ( array( 0, 100, 200 ) !== $sw_mailgate_batches || range( 1, 205 ) !== $sw_mailgate_cleared || 7 !== $sw_mailgate_site || array( 1 ) !== $sw_mailgate_stack || 'wp_7_' !== $wpdb->prefix ) { throw new RuntimeException( 'Batch traversal, cron cleanup or context restoration failed.' ); }
+if ( array( 0, 100, 200 ) !== $sw_mailgate_batches || range( 1, 205 ) !== $sw_mailgate_cleared['sw_mailgate_log_retention'] || range( 1, 205 ) !== $sw_mailgate_cleared['sw_mailgate_process_queue'] || 7 !== $sw_mailgate_site || array( 1 ) !== $sw_mailgate_stack || 'wp_7_' !== $wpdb->prefix ) { throw new RuntimeException( 'Batch traversal, cron cleanup or context restoration failed.' ); }
 for ( $sw_mailgate_i = 1; $sw_mailgate_i <= 205; ++$sw_mailgate_i ) {
 	$delete = 0 === $sw_mailgate_i % 2;
 	$expected = $delete ? array( 'unrelated_option' => 'keep' ) : $sw_mailgate_original[ $sw_mailgate_i ];
 	$expected_caps = $delete ? array( 'read' => true ) : array( 'read' => true, 'manage_sw_mailgate' => true );
-	if ( $expected !== $sw_mailgate_options[ $sw_mailgate_i ] || $expected_caps !== $sw_mailgate_roles[ $sw_mailgate_i ]->caps || $delete !== in_array( $sw_mailgate_i, $wpdb->dropped, true ) ) { throw new RuntimeException( 'Site-specific policy violated for site ' . $sw_mailgate_i ); }
+	if ( $expected !== $sw_mailgate_options[ $sw_mailgate_i ] || $expected_caps !== $sw_mailgate_roles[ $sw_mailgate_i ]->caps || $delete !== in_array( $sw_mailgate_i, $wpdb->dropped, true ) || $delete !== in_array( $sw_mailgate_i, $wpdb->dropped_queue, true ) ) { throw new RuntimeException( 'Site-specific policy violated for site ' . $sw_mailgate_i ); }
 }
 echo 'PASS: 205-site uninstall batches, per-site policies, cron, roles, tables and caller context.' . PHP_EOL;

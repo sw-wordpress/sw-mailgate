@@ -85,6 +85,20 @@ wp-config overrides, TLS/timeouts/redirect settings, HTTP and transport failure
 classification, ambiguous successful responses, safe diagnostics, redirection,
 admin fields/test actions, logging opt-in and uninstall cleanup.
 
+M5 failover hardening:
+
+    php tests/integration.php enabled failover run
+
+Uses the same disposable `WP_ROOT` / `WP_DB_*` configuration. A scripted transport
+and `pre_http_request` interception cover the circuit breaker (threshold, cooldown,
+half-open trial, recovery, all-paused fallback, explicit test mails, reset, disabled
+breaker without writes), admin notice and connection list, alert mails that avoid the
+failing connection, ambiguous Mailgun timeouts with and without failover, and the retry
+queue: encryption at rest, backoff, cron scheduling, attempt-group continuation,
+To/Cc/Bcc, HTML, custom headers, attachments whose temporary file was deleted,
+per-connection senders, expiry, undecryptable entries, privacy erasure, size limits,
+settings validation, the settings page, the dashboard widget and uninstall.
+
 Issue #10's opaque secret regression:
 
     php tests/integration.php enabled issues secrets

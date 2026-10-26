@@ -15,8 +15,9 @@ use SWMailgate\Providers\Send_Result;
 final class Attempt {
 
 	/**
-	 * @param string       $group      Shared by all attempts for the same wp_mail() call.
+	 * @param string       $group      Shared by all attempts for the same wp_mail() call, including queued retries.
 	 * @param list<string> $recipients
+	 * @param bool         $queued     The chain was exhausted and the message waits in the retry queue.
 	 */
 	public function __construct(
 		public readonly string $group,
@@ -29,7 +30,8 @@ final class Attempt {
 		public readonly array $original_to = array(),
 		public readonly string $caller = 'WordPress',
 		public readonly ?array $payload = null,
-		public readonly array $related_addresses = array()
+		public readonly array $related_addresses = array(),
+		public readonly bool $queued = false
 	) {
 	}
 }

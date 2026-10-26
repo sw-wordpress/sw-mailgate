@@ -88,6 +88,20 @@ final class Secret_Store {
 		return false;
 	}
 
+	/**
+	 * Encrypts data that is not a named secret (e.g. queued messages) with the same key.
+	 */
+	public function seal( string $value ): string {
+		return $this->encrypt( $value );
+	}
+
+	/**
+	 * @return string|null Null when the value is corrupt or was sealed with another key.
+	 */
+	public function open( string $sealed ): ?string {
+		return $this->decrypt( $sealed );
+	}
+
 	public static function uses_dedicated_key(): bool {
 		return defined( 'SW_MAILGATE_KEY' ) && is_string( SW_MAILGATE_KEY ) && strlen( SW_MAILGATE_KEY ) >= 32;
 	}

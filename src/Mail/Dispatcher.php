@@ -4,7 +4,8 @@
  *
  * Every connection gets its own clone of the populated mailer, so its sender can be rewritten and the
  * MIME message is rebuilt for it. The chain stops at the first success or at a permanent error, which
- * concerns the message itself and would fail (or duplicate) on every other connection.
+ * concerns the message itself and would fail (or duplicate) on every other connection. Connections paused
+ * by the circuit breaker are skipped; when the chain is exhausted, the retry queue may take the message.
  *
  * @package SWMailgate
  */
@@ -21,6 +22,9 @@ use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Logging\Logger;
 use SWMailgate\Logging\Settings;
+use SWMailgate\Routing\Circuit_Breaker;
+use SWMailgate\Routing\Failover_Settings;
+use SWMailgate\Routing\Retry_Queue;
 
 final class Dispatcher {
 
@@ -33,9 +37,20 @@ final class Dispatcher {
 	/** @var string|null Sender put in place of the WordPress default by filter_from() for the current mail. */
 	private ?string $substituted_from = null;
 
+	/** @var list<string> Connections left out of the chain, e.g. the failed one while sending its alert. */
+	private array $excluded = array();
+
+	/** @var array<string, mixed>|null Queue entry being retried, see retry(). */
+	private ?array $retry = null;
+
+	/** @var string Result of the last dispatch(): sent, queued or failed. */
+	private string $outcome = '';
+
 	public function __construct(
 		private readonly Connection_Repository $connections,
-		private readonly Provider_Registry $providers
+		private readonly Provider_Registry $providers,
+		private readonly ?Circuit_Breaker $breaker = null,
+		private readonly ?Retry_Queue $queue = null
 	) {
 	}
 
@@ -45,6 +60,50 @@ final class Dispatcher {
 
 	public function restrict_to( ?string $connection_id ): void {
 		$this->only = $connection_id;
+	}
+
+	/**
+	 * Runs the callback with some connections left out of the chain.
+	 *
+	 * @param list<string> $connection_ids
+	 * @return mixed The callback's return value.
+	 */
+	public function without( array $connection_ids, callable $callback ): mixed {
+		$previous       = $this->excluded;
+		$this->excluded = array_values( array_unique( array_merge( $previous, $connection_ids ) ) );
+		try {
+			return $callback();
+		} finally {
+			$this->excluded = $previous;
+		}
+	}
+
+	public function last_outcome(): string {
+		return $this->outcome;
+	}
+
+	/**
+	 * Sends a message from the retry queue again, continuing its attempt group in the log.
+	 *
+	 * @param array{entry_id: int, group: string, number: int, original_to: array, caller: string, substituted_from: ?string} $context
+	 * @return string sent, queued (another retry follows) or failed.
+	 */
+	public function retry( Mail_Catcher $mailer, array $context ): string {
+		$previous_only          = $this->only;
+		$previous_from          = $this->substituted_from;
+		$this->only             = null;
+		$this->retry            = $context;
+		$this->substituted_from = $context['substituted_from'] ?? null;
+		try {
+			$this->dispatch( $mailer, $context['original_to'] );
+		} catch ( Exception $e ) {
+			$this->outcome = 'failed';
+		} finally {
+			$this->retry            = null;
+			$this->only             = $previous_only;
+			$this->substituted_from = $previous_from;
+		}
+		return $this->outcome;
 	}
 
 	/**
@@ -102,21 +161,27 @@ final class Dispatcher {
 	 */
 	public function dispatch( Mail_Catcher $template, array $original_to = array() ): bool {
 		$this->attempts = array();
-		$group          = wp_generate_uuid4();
+		$this->outcome  = 'failed';
+		$group          = $this->retry['group'] ?? wp_generate_uuid4();
+		$offset         = (int) ( $this->retry['number'] ?? 0 );
 		$last           = null;
-		$caller         = Settings::get()['enabled'] ? Logger::caller() : 'WordPress';
+		$caller         = $this->retry['caller'] ?? ( Settings::get()['enabled'] ? Logger::caller() : 'WordPress' );
+		$chain          = $this->resolve_chain();
+		$last_index     = count( $chain ) - 1;
 
-		foreach ( $this->resolve_chain() as $connection ) {
+		foreach ( $chain as $index => $connection ) {
 			$mailer   = clone $template;
 			$provider = $this->providers->get( $connection->provider() );
 			$result   = null === $provider
 				/* translators: %s: provider ID */
 				? Send_Result::failure( Send_Result::AUTH, sprintf( __( 'Unknown provider "%s".', 'sw-mailgate' ), $connection->provider() ) )
 				: $this->attempt( $mailer, $connection, $provider );
+			$number = $offset + count( $this->attempts ) + 1;
+			$queued = $index === $last_index && $result->allows_failover() && $this->defer( $template, $group, $number, $original_to, $caller, $result->message() );
 
 			$attempt          = new Attempt(
 				$group,
-				count( $this->attempts ) + 1,
+				$number,
 				$connection,
 				$result,
 				$mailer->From,
@@ -125,7 +190,8 @@ final class Dispatcher {
 				$original_to,
 				$caller,
 				$this->payload( $mailer ),
-				array_column( $mailer->getReplyToAddresses(), 0 )
+				array_column( $mailer->getReplyToAddresses(), 0 ),
+				$queued
 			);
 			$this->attempts[] = $attempt;
 
@@ -136,7 +202,8 @@ final class Dispatcher {
 			 */
 			do_action( 'sw_mailgate_attempt', $attempt );
 
-			if ( $result->is_success() ) {
+			if ( $result->is_success() || $queued ) {
+				$this->outcome = $result->is_success() ? 'sent' : 'queued';
 				return true;
 			}
 			$last = $result;
@@ -145,10 +212,33 @@ final class Dispatcher {
 			}
 		}
 
-		throw new Exception(
-			null === $last
-				? esc_html__( 'No enabled mail connection is available.', 'sw-mailgate' )
-				: esc_html( $last->message() )
+		$message = null === $last ? __( 'No enabled mail connection is available.', 'sw-mailgate' ) : $last->message();
+		if ( null === $last && null !== $this->retry && $this->defer( $template, $group, $offset, $original_to, $caller, $message ) ) {
+			// Every connection was disabled meanwhile: keep the queued message until it expires.
+			$this->outcome = 'queued';
+			return true;
+		}
+		throw new Exception( esc_html( $message ) );
+	}
+
+	/**
+	 * Hands an undeliverable message to the retry queue. Test mails to one connection are never queued.
+	 */
+	private function defer( Mail_Catcher $template, string $group, int $number, array $original_to, string $caller, string $error ): bool {
+		if ( null === $this->queue || ( null !== $this->only && null === $this->retry ) ) {
+			return false;
+		}
+		return $this->queue->defer(
+			$template,
+			array(
+				'group'            => $group,
+				'number'           => $number,
+				'original_to'      => $original_to,
+				'caller'           => $caller,
+				'substituted_from' => $this->substituted_from,
+				'error'            => $error,
+			),
+			isset( $this->retry['entry_id'] ) ? (int) $this->retry['entry_id'] : null
 		);
 	}
 
@@ -156,11 +246,15 @@ final class Dispatcher {
 	 * @return Connection[]
 	 */
 	private function resolve_chain(): array {
-		if ( null === $this->only ) {
-			return $this->connections->chain();
+		if ( null !== $this->only ) {
+			// An explicitly selected connection is used even when it is disabled or paused.
+			$connection = $this->connections->find( $this->only );
+			return null === $connection ? array() : array( $connection );
 		}
-		$connection = $this->connections->find( $this->only );
-		return null === $connection ? array() : array( $connection );
+		$chain = array_values(
+			array_filter( $this->connections->chain(), fn( Connection $connection ): bool => ! in_array( $connection->id(), $this->excluded, true ) )
+		);
+		return null === $this->breaker ? $chain : $this->breaker->filter( $chain );
 	}
 
 	/** Store only message fields, never SMTP configuration or arbitrary custom headers. */
@@ -202,6 +296,12 @@ final class Dispatcher {
 		} catch ( \Throwable $e ) {
 			// A provider bug must not block the next connection.
 			$result = Send_Result::failure( Send_Result::TRANSIENT, $e->getMessage() );
+		}
+		if ( $result->is_ambiguous() && $result->allows_failover() && ! Failover_Settings::get()['timeout_failover'] ) {
+			$result = $result->reclassify(
+				Send_Result::UNCERTAIN,
+				$result->message() . ' ' . __( 'The provider did not answer after the message was sent, so it may have been accepted. Automatic failover was stopped to avoid duplicates.', 'sw-mailgate' )
+			);
 		}
 		return $result->with_duration( microtime( true ) - $start );
 	}

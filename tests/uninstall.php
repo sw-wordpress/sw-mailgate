@@ -24,6 +24,8 @@ $sw_mailgate_test_options = array(
 	'sw_mailgate_db_version'  => 1,
 	'sw_mailgate_logging'     => array( 'enabled' => true ),
 	'sw_mailgate_redirection' => array( 'target' => 'sink@example.test' ),
+	'sw_mailgate_failover'    => array( 'queue_enabled' => true ),
+	'sw_mailgate_health'      => array( 'smtp' => array( 'failures' => 3 ) ),
 	'unrelated_option'       => 'keep',
 );
 if ( 'default' !== $sw_mailgate_test_mode ) {
@@ -57,32 +59,33 @@ function is_multisite(): bool {
 }
 
 function wp_clear_scheduled_hook( string $hook ): void {
-	$GLOBALS['sw_mailgate_test_cleared_hook'] = $hook;
+	$GLOBALS['sw_mailgate_test_cleared_hooks'][] = $hook;
 }
 
 $wpdb = new class() {
 	public string $prefix = 'wp_';
-	public bool $dropped = false;
+	public array $dropped = array();
 
 	public function prepare( string $query, string $table ): string {
-		if ( 'wp_sw_mailgate_log' !== $table ) {
+		if ( ! in_array( $table, array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue' ), true ) ) {
 			throw new RuntimeException( 'Unexpected table.' );
 		}
 		return str_replace( '%i', '`' . $table . '`', $query );
 	}
 
 	public function query( string $query ): void {
-		if ( 'DROP TABLE IF EXISTS `wp_sw_mailgate_log`' !== $query ) {
+		if ( ! preg_match( '/^DROP TABLE IF EXISTS `(wp_sw_mailgate_(?:log|queue))`$/', $query, $match ) ) {
 			throw new RuntimeException( 'Unexpected uninstall query.' );
 		}
-		$this->dropped = true;
+		$this->dropped[] = $match[1];
 	}
 };
 
 require $sw_mailgate_test_root . '/uninstall.php';
 
-if ( $wpdb->dropped !== ( 'delete' === $sw_mailgate_test_mode ) || 'sw_mailgate_log_retention' !== $sw_mailgate_test_cleared_hook ) {
-	throw new RuntimeException( 'Uninstall did not handle the log table and cron correctly.' );
+$sw_mailgate_test_tables = 'delete' === $sw_mailgate_test_mode ? array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue' ) : array();
+if ( $wpdb->dropped !== $sw_mailgate_test_tables || array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue' ) !== $sw_mailgate_test_cleared_hooks ) {
+	throw new RuntimeException( 'Uninstall did not handle the tables and cron events correctly.' );
 }
 
 $sw_mailgate_test_expected = 'delete' === $sw_mailgate_test_mode
