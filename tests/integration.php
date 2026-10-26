@@ -182,7 +182,11 @@ add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => arr
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
 if ( null !== $issue_mode ) {
-	include __DIR__ . ( 'smtp' === $issue_mode ? '/smtp-delivery.php' : '/editor-overrides.php' );
+	include __DIR__ . match ( $issue_mode ) {
+		'smtp' => '/smtp-delivery.php',
+		'secrets' => '/secret-values.php',
+		default => '/editor-overrides.php',
+	};
 	$sw_mailgate_test_complete = true;
 	exit;
 }
