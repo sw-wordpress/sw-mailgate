@@ -59,6 +59,10 @@ jobs:
             curl --fail --location --retry 3 "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o /tmp/wordpress.tar.gz
           fi
           tar -xzf /tmp/wordpress.tar.gz -C /tmp
+      - name: SMTP diagnostics without mbstring
+        env:
+          WP_ROOT: /tmp/wordpress
+        run: php -n -d disable_functions=mb_check_encoding tests/smtp-diagnostics.php
       - name: WordPress and MariaDB integration
         env:
           WP_ROOT: /tmp/wordpress

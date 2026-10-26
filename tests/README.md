@@ -1,5 +1,14 @@
 # Tests
 
+Issue #8's SMTP diagnostic regression runs without PHP extensions loaded:
+
+    WP_ROOT=/tmp/wordpress php -n -d disable_functions=mb_check_encoding tests/smtp-diagnostics.php
+
+It uses WordPress's PHPMailer and the real provider against a loopback SMTP
+fixture. The explicit disable also covers PHP builds with mbstring compiled in.
+Sending and connection tests must succeed without mb_check_encoding, retain
+valid UTF-8, omit invalid UTF-8/control data and keep AUTH/DATA private.
+
 Run the checkout and uninstall smoke tests after `composer install`:
 
 ```sh
