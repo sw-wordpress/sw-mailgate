@@ -236,7 +236,7 @@ final class Smtp_Provider implements Provider {
 		$mailer->Debugoutput = static function ( string $line ) use ( &$lines, &$state ): void {
 			$line = trim( $line );
 			// After a failed TLS handshake the server may answer with raw TLS records.
-			if ( ! mb_check_encoding( $line, 'UTF-8' ) || preg_match( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $line ) ) {
+			if ( 1 !== preg_match( '//u', $line ) || preg_match( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $line ) ) {
 				$prefix = preg_match( '/^(CLIENT -> SERVER:|SERVER -> CLIENT:|SMTP ERROR: [A-Za-z ]+:)/', $line, $m ) ? $m[1] . ' ' : '';
 				$line   = $prefix . '[binary data omitted]';
 			}
