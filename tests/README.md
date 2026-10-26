@@ -1,5 +1,14 @@
 # Tests
 
+Issue #9's TLS policy regression:
+
+    WP_ROOT=/tmp/wordpress php tests/smtp-tls-policy.php
+
+This standalone test uses OpenSSL and WordPress's PHPMailer, with real STARTTLS
+and implicit TLS handshakes against a loopback fixture. It checks rejection of
+untrusted and mismatched certificates despite inherited insecure options, explicit
+verification opt-out, configured peer names and preservation of trust stores.
+
 Run the checkout and uninstall smoke tests after `composer install`:
 
 ```sh

@@ -59,6 +59,10 @@ jobs:
             curl --fail --location --retry 3 "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o /tmp/wordpress.tar.gz
           fi
           tar -xzf /tmp/wordpress.tar.gz -C /tmp
+      - name: SMTP TLS verification policy
+        env:
+          WP_ROOT: /tmp/wordpress
+        run: php tests/smtp-tls-policy.php
       - name: WordPress and MariaDB integration
         env:
           WP_ROOT: /tmp/wordpress

@@ -84,23 +84,23 @@ final class Smtp_Provider implements Provider {
 		$mailer->Timeout     = max( 5, (int) $connection->get( 'timeout', '15' ) );
 		$mailer->setSMTPInstance( new Tracked_SMTP() );
 
+		// Keep trust stores and other compatible context options, but enforce this connection's policy.
 		// Connections saved before this option existed have no value: they keep verifying.
-		if ( '0' === $connection->get( 'tls_verify', '1' ) ) {
-			$mailer->SMTPOptions = array(
-				'ssl' => array(
-					'verify_peer'       => false,
-					'verify_peer_name'  => false,
-					'allow_self_signed' => true,
-				),
-			);
-			return;
-		}
+		$verify = '0' !== $connection->get( 'tls_verify', '1' );
+		$ssl    = $mailer->SMTPOptions['ssl'] ?? array();
+		$ssl    = is_array( $ssl ) ? $ssl : array();
 
-		// Connect to an IP or internal alias but verify the certificate against its real name.
+		$ssl['verify_peer']       = $verify;
+		$ssl['verify_peer_name']  = $verify;
+		$ssl['allow_self_signed'] = ! $verify;
+
+		// An empty override uses the SMTP host, never a peer name inherited from another integration.
+		unset( $ssl['peer_name'] );
 		$peer_name = $connection->get( 'tls_peer_name' );
 		if ( '' !== $peer_name ) {
-			$mailer->SMTPOptions = array( 'ssl' => array( 'peer_name' => $peer_name ) );
+			$ssl['peer_name'] = $peer_name;
 		}
+		$mailer->SMTPOptions['ssl'] = $ssl;
 	}
 
 	public function send( Envelope $envelope, Connection $connection ): Send_Result {
