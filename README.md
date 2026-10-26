@@ -2,6 +2,12 @@
 
 A WordPress mail transport plugin with connection failover and optional delivery logs.
 
+## Admin UI build
+
+Run `make build` from the plugin directory for the same entry point as the other SW
+plugins. No compilation or Node.js dependencies are needed: the admin UI uses PHP
+templates and `assets/admin.css` directly. The command reports this and exits successfully.
+
 ## Enable logging
 
 Logging is **off by default**. To allow it, add this to `wp-config.php` before the
