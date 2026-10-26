@@ -18,17 +18,19 @@ if ( '--server' === ( $argv[1] ?? '' ) ) {
 	if ( false === $client ) { exit( 1 ); }
 	stream_set_timeout( $client, 5 );
 	if ( 'ssl' === $argv[4] && ! @stream_socket_enable_crypto( $client, true, STREAM_CRYPTO_METHOD_TLS_SERVER ) ) { exit; }
-	fwrite( $client, "220 localhost fixture\r\n" );
-	while ( false !== ( $line = fgets( $client ) ) ) {
+	// A client rejecting this certificate can close after the server handshake succeeds.
+	// Treat its disconnect as normal fixture I/O, including TLS alert/broken-pipe warnings.
+	if ( false === @fwrite( $client, "220 localhost fixture\r\n" ) ) { exit; }
+	while ( false !== ( $line = @fgets( $client ) ) ) {
 		$command = trim( $line );
 		if ( 'STARTTLS' === $command ) {
-			fwrite( $client, "220 Ready for TLS\r\n" );
+			if ( false === @fwrite( $client, "220 Ready for TLS\r\n" ) ) { break; }
 			if ( ! @stream_socket_enable_crypto( $client, true, STREAM_CRYPTO_METHOD_TLS_SERVER ) ) { break; }
 		} elseif ( 'QUIT' === $command ) {
-			fwrite( $client, "221 goodbye\r\n" );
+			@fwrite( $client, "221 goodbye\r\n" );
 			break;
 		} else {
-			fwrite( $client, "250-localhost\r\n250 STARTTLS\r\n" );
+			if ( false === @fwrite( $client, "250-localhost\r\n250 STARTTLS\r\n" ) ) { break; }
 		}
 	}
 	fclose( $client );
@@ -95,7 +97,7 @@ try {
 				sw_mailgate_tls_check( $connected === $case['success'], $encryption . ': actual handshake enforces ' . $label . '.' );
 				$error = stream_get_contents( $pipes[2] );
 				foreach ( $pipes as $pipe ) { fclose( $pipe ); }
-				sw_mailgate_tls_check( 0 === proc_close( $process ) && '' === $error, 'TLS fixture completed without errors.' );
+				sw_mailgate_tls_check( 0 === proc_close( $process ) && '' === $error, 'TLS fixture completed without errors. ' . $error );
 				$process = null;
 			} finally {
 				if ( is_resource( $process ) ) { proc_terminate( $process ); proc_close( $process ); }
