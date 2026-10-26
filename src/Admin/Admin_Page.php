@@ -18,6 +18,7 @@ use SWMailgate\Mail\Redirector;
 use SWMailgate\Providers\Field;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Send_Result;
+use SWMailgate\Routing\Circuit_Breaker;
 use SWMailgate\Security\Secret_Store;
 
 final class Admin_Page {
@@ -37,7 +38,8 @@ final class Admin_Page {
 		private readonly Provider_Registry $providers,
 		private readonly Secret_Store $secrets,
 		private readonly Dispatcher $dispatcher,
-		private readonly Redirector $redirector
+		private readonly Redirector $redirector,
+		private readonly ?Circuit_Breaker $breaker = null
 	) {
 	}
 
@@ -45,6 +47,7 @@ final class Admin_Page {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'admin_notices', array( $this, 'key_notice' ) );
+		add_action( 'admin_notices', array( $this, 'health_notice' ) );
 		add_action( 'admin_post_sw_mailgate_save_connection', array( $this, 'handle_save_connection' ) );
 		add_action( 'admin_post_sw_mailgate_connection_action', array( $this, 'handle_connection_action' ) );
 		add_action( 'admin_post_sw_mailgate_test_connection', array( $this, 'handle_test_connection' ) );
@@ -96,6 +99,35 @@ final class Admin_Page {
 		);
 	}
 
+	/**
+	 * Warns while a connection keeps failing, on every admin page: mails may be delayed or use a fallback sender.
+	 */
+	public function health_notice(): void {
+		if ( null === $this->breaker || ! current_user_can( Capabilities::MANAGE ) ) {
+			return;
+		}
+		foreach ( $this->connections->chain() as $connection ) {
+			if ( ! $this->breaker->is_failing( $connection->id() ) ) {
+				continue;
+			}
+			$state = $this->breaker->state( $connection->id() );
+			printf(
+				'<div class="notice notice-warning"><p>%s</p><p>%s <a href="%s">%s</a></p></div>',
+				esc_html(
+					$this->breaker->is_open( $connection->id() )
+						/* translators: 1: connection label, 2: number of failures, 3: time */
+						? sprintf( __( 'SW Mailgate: the connection "%1$s" failed %2$d times in a row and is skipped until %3$s.', 'sw-mailgate' ), $connection->label(), $state['failures'], wp_date( get_option( 'time_format' ), $state['open_until'] ) )
+						/* translators: 1: connection label, 2: number of failures */
+						: sprintf( __( 'SW Mailgate: the connection "%1$s" failed %2$d times in a row. The next mail tries it again.', 'sw-mailgate' ), $connection->label(), $state['failures'] )
+				),
+				/* translators: %s: error message */
+				esc_html( sprintf( __( 'Last error: %s', 'sw-mailgate' ), $state['last_error'] ) ),
+				esc_url( self::url() ),
+				esc_html__( 'Check connections', 'sw-mailgate' )
+			);
+		}
+	}
+
 	public function render_connections(): void {
 		$this->require_capability();
 
@@ -122,7 +154,13 @@ final class Admin_Page {
 			}
 		}
 
-		$data['connections']  = $this->connections->all();
+		$data['connections'] = $this->connections->all();
+		$data['health']      = array();
+		foreach ( $data['connections'] as $connection ) {
+			if ( null !== $this->breaker && $this->breaker->is_failing( $connection->id() ) ) {
+				$data['health'][ $connection->id() ] = $this->breaker->state( $connection->id() ) + array( 'open' => $this->breaker->is_open( $connection->id() ) );
+			}
+		}
 		$data['dedicated']    = Secret_Store::uses_dedicated_key();
 		$data['chain_active'] = array() !== $this->connections->chain();
 		$this->include_template( 'connections', $data );
@@ -216,6 +254,11 @@ final class Admin_Page {
 				$this->connections->delete_secret( $id, $key );
 			}
 		}
+		// A changed configuration deserves a fresh chance.
+		$saved = $this->connections->find( $id );
+		if ( null !== $this->breaker && null !== $saved ) {
+			$this->breaker->close( $saved );
+		}
 
 		$this->redirect(
 			self::SLUG,
@@ -250,7 +293,12 @@ final class Admin_Page {
 				break;
 			case 'delete':
 				$this->connections->delete( $id );
+				$this->breaker?->forget( $id );
 				$this->redirect( self::SLUG, 'deleted' );
+				break;
+			case 'reset':
+				$this->breaker?->close( $this->connections->find( $id ) );
+				$this->redirect( self::SLUG, 'reset' );
 				break;
 		}
 		$this->redirect( self::SLUG, 'not_found' );
@@ -269,6 +317,9 @@ final class Admin_Page {
 
 		$start  = microtime( true );
 		$result = $provider->test_connection( $connection )->with_duration( microtime( true ) - $start );
+		if ( $result->is_success() ) {
+			$this->breaker?->close( $connection );
+		}
 		$this->store_results(
 			__( 'Connection test', 'sw-mailgate' ),
 			array( $this->result_row( $connection, $result ) )
@@ -404,6 +455,7 @@ final class Admin_Page {
 			'moved'             => array( 'success', __( 'Failover order changed.', 'sw-mailgate' ) ),
 			'enabled'           => array( 'success', __( 'Connection enabled.', 'sw-mailgate' ) ),
 			'disabled'          => array( 'success', __( 'Connection disabled.', 'sw-mailgate' ) ),
+			'reset'             => array( 'success', __( 'Failure counter reset. The connection is used again.', 'sw-mailgate' ) ),
 			'not_found'         => array( 'error', __( 'The connection does not exist.', 'sw-mailgate' ) ),
 			'unknown_provider'  => array( 'error', __( 'Unknown provider.', 'sw-mailgate' ) ),
 			'invalid_recipient' => array( 'error', __( 'Please enter a valid recipient address.', 'sw-mailgate' ) ),

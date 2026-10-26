@@ -28,6 +28,9 @@ use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\Providers\Provider;
 use SWMailgate\Providers\Send_Result;
+use SWMailgate\Routing\Circuit_Breaker;
+use SWMailgate\Routing\Failover_Settings;
+use SWMailgate\Routing\Retry_Queue;
 use SWMailgate\Security\Secret_Store;
 
 $issue_mode = ( $argv[2] ?? '' ) === 'issues' ? ( $argv[3] ?? 'smtp' ) : null;
@@ -49,6 +52,11 @@ if ( 'run' === $multisite_mode ) {
 	define( 'PATH_CURRENT_SITE', '/' );
 	define( 'SITE_ID_CURRENT_SITE', 1 );
 	define( 'BLOG_ID_CURRENT_SITE', 1 );
+}
+
+$failover_mode = ( $argv[2] ?? '' ) === 'failover' ? ( $argv[3] ?? 'run' ) : null;
+if ( null !== $failover_mode && 'run' !== $failover_mode ) {
+	throw new InvalidArgumentException( 'Invalid failover test mode.' );
 }
 
 $mailgun_mode = ( $argv[2] ?? '' ) === 'mailgun' ? ( $argv[3] ?? 'api' ) : null;
@@ -144,7 +152,8 @@ Installer::maybe_upgrade();
 // A prior run may have removed the capability; refresh the already loaded WP_User.
 wp_set_current_user( 0 );
 wp_set_current_user( (int) get_user_by( 'login', 'testadmin' )->ID );
-sw_mailgate_check( 2 === (int) get_option( 'sw_mailgate_db_version' ), 'Schema upgrade is idempotent.' );
+sw_mailgate_check( Installer::DB_VERSION === (int) get_option( 'sw_mailgate_db_version' ), 'Schema upgrade is idempotent.' );
+sw_mailgate_check( Retry_Queue::table() === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( Retry_Queue::table() ) ) ), 'Schema upgrade creates the retry queue table.' );
 sw_mailgate_check( (bool) wp_next_scheduled( Logger::CRON_HOOK ), 'Retention cron is scheduled.' );
 
 $logs = new Log_Repository();
@@ -152,6 +161,10 @@ $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', Log_Repository::table() ) );
 delete_option( Settings::OPTION );
 delete_option( \SWMailgate\Mail\Redirection_Settings::OPTION );
 delete_option( Connection_Repository::OPTION );
+delete_option( Circuit_Breaker::OPTION );
+$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', Retry_Queue::table() ) );
+// The deterministic 'first' connection always fails; M1–M4 suites expect it in every attempt group.
+update_option( Failover_Settings::OPTION, array( 'breaker_threshold' => 0 ) );
 $connections = new Connection_Repository( new Secret_Store() );
 foreach ( array( 'first', 'second' ) as $id ) {
 	$connections->save( array( 'id' => $id, 'provider' => 'test', 'enabled' => true, 'from_email' => 'sender@example.test' ) );
@@ -192,6 +205,11 @@ if ( null !== $issue_mode ) {
 }
 if ( null !== $multisite_mode ) {
 	include __DIR__ . '/multisite.php';
+	$sw_mailgate_test_complete = true;
+	exit;
+}
+if ( null !== $failover_mode ) {
+	include __DIR__ . '/failover.php';
 	$sw_mailgate_test_complete = true;
 	exit;
 }

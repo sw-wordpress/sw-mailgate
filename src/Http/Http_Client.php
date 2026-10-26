@@ -13,12 +13,13 @@ final class Http_Client {
 
 	/**
 	 * @param array<string, string> $headers
-	 * @return array{status: int, data: ?array, debug: list<string>, duration: float}
+	 * @return array{status: int, data: ?array, debug: list<string>, duration: float, ambiguous: bool}
 	 */
 	public function request( string $method, string $url, array $headers, string $body = '', int $timeout = 15 ): array {
-		$start  = microtime( true );
-		$status = 0;
-		$data   = null;
+		$start     = microtime( true );
+		$status    = 0;
+		$data      = null;
+		$ambiguous = false;
 		try {
 			$response = wp_remote_request(
 				$url,
@@ -35,7 +36,9 @@ final class Http_Client {
 					'data_format'         => 'body',
 				)
 			);
-			if ( ! is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
+				$ambiguous = self::is_ambiguous( $response->get_error_message() );
+			} else {
 				$status  = (int) wp_remote_retrieve_response_code( $response );
 				$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
 				$data    = is_array( $decoded ) ? $decoded : null;
@@ -46,11 +49,23 @@ final class Http_Client {
 		}
 		$duration = microtime( true ) - $start;
 		return array(
-			'status'   => $status,
-			'data'     => $data,
-			'duration' => $duration,
-			'debug'    => array( sprintf( '%s %s: %s (%.3f s)', $method, (string) wp_parse_url( $url, PHP_URL_HOST ), $status ? 'HTTP ' . $status : 'transport error', $duration ) ),
+			'status'    => $status,
+			'data'      => $data,
+			'duration'  => $duration,
+			'ambiguous' => $ambiguous,
+			'debug'     => array( sprintf( '%s %s: %s (%.3f s)', $method, (string) wp_parse_url( $url, PHP_URL_HOST ), $status ? 'HTTP ' . $status : ( $ambiguous ? 'no response (timeout)' : 'transport error' ), $duration ) ),
 		);
+	}
+
+	/**
+	 * True when the transport failed after the request may have reached the server: a read timeout or a
+	 * lost connection. DNS, connect and TLS handshake errors happen before anything is sent.
+	 */
+	public static function is_ambiguous( string $error ): bool {
+		if ( preg_match( '/Could not resolve|Resolving timed out|Connection timed out after|Failed to connect|Connection refused|SSL certificate|SSL connect error/i', $error ) ) {
+			return false;
+		}
+		return (bool) preg_match( '/Operation timed out|timed out after|Empty reply from server|Recv failure|Send failure|Connection reset|connection was closed|fsocket timed out/i', $error );
 	}
 
 	/**

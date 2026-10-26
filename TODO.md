@@ -19,13 +19,13 @@ Legend: `[x]` done · `[ ]` open · **(M)** milestone release
 - [x] wp-config overrides `SW_MAILGATE_<CONNECTION>_<FIELD>`; locked fields in the UI
 - [x] Admin: connection list (order, enable/disable, delete), connection editor, test mail page with per-attempt results
 - [x] `sw_mailgate_attempt` action after every attempt
-- [x] Smoke test against Mailpit (failover, Bcc, Reply-To, secrets, constants) – lives in the scratchpad, see "Tests" below
+- [x] Smoke test against Mailpit (failover, Bcc, Reply-To, secrets, constants)
 
 ---
 
 ## Next steps (short term)
 
-- [ ] Move the smoke test into `tests/` as PHPUnit integration tests (`tests/bootstrap.php` exists)
+- [x] Integration tests in `tests/` against WordPress + MariaDB, run by CI (see `tests/README.md`)
 - [ ] Detect other mailer plugins (e.g. WP Mail SMTP) that also replace `$phpmailer` and show an admin notice
 - [ ] German translation (`languages/sw-mailgate-de_DE.po/.mo`); load `de_DE.mo` explicitly for `de_DE_formal` (WP 7.1 just-in-time loading does not fall back)
 - [x] Settings page: "delete data on uninstall" (`sw_mailgate_delete_data`)
@@ -80,10 +80,17 @@ stop failover to avoid automatic duplicates. Logging remains wp-config opt-in on
 
 ## M5 – Failover hardening (0.5.0)
 
-- [ ] Circuit breaker: skip a connection for X minutes after N failures (transient)
-- [ ] Option "no failover on timeout" (prevents duplicates when the provider already accepted the mail)
-- [ ] Admin notice and optional alert mail (via another connection) when a connection keeps failing
-- [ ] Optional retry queue `{prefix}sw_mailgate_queue` with the encrypted MIME message; delete after success or expiry (default **off**)
+- [x] Circuit breaker (`Routing\Circuit_Breaker`, option `sw_mailgate_health`): skip a connection for X minutes after N consecutive transient/auth failures; one trial after the pause; never blocks when every connection is paused
+- [x] Option "fail over on API timeouts" (default on): when off, ambiguous HTTP timeouts become `uncertain`; DNS/connect/TLS errors always fail over
+- [x] Admin notice on every admin page; status and "Reset and use again" in the connection list
+- [x] Optional alert mail (paused, recovered, queued mail given up), sent on `shutdown` through the other connections
+- [x] Optional retry queue `{prefix}sw_mailgate_queue` (default **off**, DB version 3): encrypted message data instead of MIME, so each connection applies its own sender on retries
+
+M5 notes: queued messages keep attachments up to 5 MB in total; larger ones fail as
+before. Backoff 5/15/30/60/120/240 minutes, expiry 1–72 hours (default 24). The log
+marks the attempt `queued` and retries continue the same attempt group. Settings applied
+by other plugins in `phpmailer_init` (e.g. DKIM keys) are not reapplied on retries. Test
+mails and permanent, partial or uncertain results are never queued. See `README.md`.
 
 ## M6 – OAuth providers: Google & Microsoft 365 (0.6.0)
 
@@ -141,5 +148,5 @@ stop failover to avoid automatic duplicates. Logging remains wp-config opt-in on
 
 ## Tests
 
-- Local Mailpit: SMTP `127.0.0.1:32768`, API/UI `http://localhost:8025`. 
-- Smoke test without DB writes: options are injected with `pre_option_*` filters (currently in the Claude scratchpad, to be moved to `tests/`).
+- Integration suites: see `tests/README.md` (disposable WordPress copy + MariaDB database).
+- Local Mailpit: SMTP port is dynamic (`docker port ruestzeit-anmeldung-mailer-1 1025`), API/UI `http://localhost:8025`.

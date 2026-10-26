@@ -15,11 +15,14 @@ use SWMailgate\Logging\Logger;
 use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Logging\Settings;
 use SWMailgate\Mail\Redirection_Settings;
+use SWMailgate\Routing\Circuit_Breaker;
+use SWMailgate\Routing\Failover_Settings;
+use SWMailgate\Routing\Retry_Queue;
 
 final class Installer {
 
 	/** Bump when the schema or stored data changes; upgrade() runs once per change. */
-	public const DB_VERSION = 2;
+	public const DB_VERSION = 3;
 
 	private const VERSION_OPTION = 'sw_mailgate_db_version';
 
@@ -68,9 +71,29 @@ final class Installer {
 			KEY connection_id (connection_id)
 			) $collate;"
 		);
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Verify the schema exists before marking the migration complete.
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) !== $table ) {
-			return;
+		$queue = Retry_Queue::table();
+		dbDelta(
+			"CREATE TABLE $queue (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			created_at datetime NOT NULL,
+			next_run_at datetime NOT NULL,
+			expires_at datetime NOT NULL,
+			retries int unsigned NOT NULL DEFAULT 0,
+			attempt_group varchar(36) NOT NULL,
+			attempt_number int unsigned NOT NULL,
+			locked_until datetime NULL,
+			last_error text NOT NULL,
+			address_hashes longtext NOT NULL,
+			payload longtext NOT NULL,
+			PRIMARY KEY  (id),
+			KEY next_run_at (next_run_at)
+			) $collate;"
+		);
+		foreach ( array( $table, $queue ) as $name ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Verify the schema exists before marking the migration complete.
+			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $name ) ) ) !== $name ) {
+				return;
+			}
 		}
 		$role = get_role( 'administrator' );
 		if ( null !== $role && ! $role->has_cap( Capabilities::MANAGE ) ) {
@@ -83,6 +106,7 @@ final class Installer {
 
 	public static function deactivate(): void {
 		wp_clear_scheduled_hook( Logger::CRON_HOOK );
+		wp_clear_scheduled_hook( Retry_Queue::CRON_HOOK );
 	}
 
 	public static function uninstall(): void {
@@ -131,7 +155,11 @@ final class Installer {
 		delete_option( self::DELETE_DATA_OPTION );
 		delete_option( Settings::OPTION );
 		delete_option( Redirection_Settings::OPTION );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Remove the owned table only after the user enabled data deletion.
-		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', Log_Repository::table() ) );
+		delete_option( Failover_Settings::OPTION );
+		delete_option( Circuit_Breaker::OPTION );
+		foreach ( array( Log_Repository::table(), Retry_Queue::table() ) as $table ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Remove the owned tables only after the user enabled data deletion.
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
+		}
 	}
 }

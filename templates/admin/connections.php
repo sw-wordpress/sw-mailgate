@@ -40,7 +40,7 @@ $action_button = static function ( string $id, string $action, string $label, st
 	<?php require __DIR__ . '/messages.php'; ?>
 
 	<p class="description">
-		<?php esc_html_e( 'Mails are sent through the first enabled connection. If it fails with a temporary or login error, the next one is tried. Messages rejected for their content or recipients are not retried elsewhere.', 'sw-mailgate' ); ?>
+		<?php esc_html_e( 'Mails are sent through the first enabled connection. If it fails with a temporary or login error, the next one is tried. Messages rejected for their content or recipients are not retried elsewhere. A connection that fails repeatedly is skipped for a while (see Settings).', 'sw-mailgate' ); ?>
 	</p>
 	<?php if ( ! $data['chain_active'] ) : ?>
 		<div class="notice notice-info inline"><p><?php esc_html_e( 'No connection is enabled. WordPress currently sends mail with PHP mail().', 'sw-mailgate' ); ?></p></div>
@@ -93,10 +93,29 @@ $action_button = static function ( string $id, string $action, string $label, st
 					<td><?php echo esc_html( null === $provider ? $connection->provider() : $provider->label() ); ?></td>
 					<td><?php echo esc_html( '' === $connection->from_email() ? '—' : $connection->from_email() ); ?></td>
 					<td>
-						<?php if ( $connection->is_enabled() ) : ?>
-							<span class="swmg-status swmg-status--ok"><?php esc_html_e( 'Enabled', 'sw-mailgate' ); ?></span>
-						<?php else : ?>
+						<?php $health = $data['health'][ $connection->id() ] ?? null; ?>
+						<?php if ( ! $connection->is_enabled() ) : ?>
 							<span class="swmg-status"><?php esc_html_e( 'Disabled', 'sw-mailgate' ); ?></span>
+						<?php elseif ( null !== $health ) : ?>
+							<span class="swmg-status swmg-status--error">
+								<?php
+								echo esc_html(
+									$health['open']
+										/* translators: %s: time */
+										? sprintf( __( 'Paused until %s', 'sw-mailgate' ), wp_date( get_option( 'time_format' ), $health['open_until'] ) )
+										: __( 'Failing', 'sw-mailgate' )
+								);
+								?>
+							</span>
+							<div class="swmg-error">
+								<?php
+								/* translators: 1: number of failures, 2: error message */
+								echo esc_html( sprintf( __( '%1$d failures in a row. Last error: %2$s', 'sw-mailgate' ), $health['failures'], $health['last_error'] ) );
+								?>
+							</div>
+							<?php $action_button( $connection->id(), 'reset', __( 'Reset and use again', 'sw-mailgate' ) ); ?>
+						<?php else : ?>
+							<span class="swmg-status swmg-status--ok"><?php esc_html_e( 'Enabled', 'sw-mailgate' ); ?></span>
 						<?php endif; ?>
 					</td>
 					<td>

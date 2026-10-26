@@ -22,6 +22,9 @@ use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Logging\Privacy;
 use SWMailgate\Admin\Log_Page;
 use SWMailgate\Mail\Redirector;
+use SWMailgate\Routing\Circuit_Breaker;
+use SWMailgate\Routing\Failure_Alert;
+use SWMailgate\Routing\Retry_Queue;
 
 final class Plugin {
 
@@ -44,12 +47,17 @@ final class Plugin {
 		$secrets          = new Secret_Store();
 		$connections      = new Connection_Repository( $secrets );
 		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider() ) );
-		$this->dispatcher = new Dispatcher( $connections, $providers );
+		$breaker          = new Circuit_Breaker();
+		$queue            = new Retry_Queue( $secrets );
+		$this->dispatcher = new Dispatcher( $connections, $providers, $breaker, $queue );
 		$this->redirector = new Redirector();
 		$logs             = new Log_Repository();
 		( new Logger( $logs ) )->register();
-		( new Privacy( $logs ) )->register();
+		( new Privacy( $logs, $queue ) )->register();
 		add_action( 'init', array( Logger::class, 'schedule' ) );
+		add_action( 'sw_mailgate_attempt', array( $breaker, 'record' ) );
+		$queue->register( $this->dispatcher );
+		( new Failure_Alert( $this->dispatcher ) )->register();
 
 		// Late, so the catcher wins over plugins that also replace PHPMailer during plugins_loaded.
 		add_action( 'plugins_loaded', array( $this, 'install_mailer' ), PHP_INT_MAX );
@@ -57,8 +65,8 @@ final class Plugin {
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
-			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector ) )->register();
-			( new Log_Page( $logs, $connections ) )->register();
+			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector, $breaker ) )->register();
+			( new Log_Page( $logs, $connections, $queue, $this->dispatcher ) )->register();
 		}
 	}
 

@@ -14,14 +14,22 @@ use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Installer;
 use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Logging\Settings;
+use SWMailgate\Mail\Dispatcher;
 use SWMailgate\Mail\Redirection_Settings;
+use SWMailgate\Routing\Failover_Settings;
+use SWMailgate\Routing\Retry_Queue;
 
 final class Log_Page {
 
 	public const SLUG          = 'sw-mailgate-log';
 	public const SETTINGS_SLUG = 'sw-mailgate-settings';
 
-	public function __construct( private readonly Log_Repository $logs, private readonly Connection_Repository $connections ) {
+	public function __construct(
+		private readonly Log_Repository $logs,
+		private readonly Connection_Repository $connections,
+		private readonly ?Retry_Queue $queue = null,
+		private readonly ?Dispatcher $dispatcher = null
+	) {
 	}
 
 	public function register(): void {
@@ -29,6 +37,7 @@ final class Log_Page {
 		add_action( 'admin_post_sw_mailgate_save_settings', array( $this, 'save_settings' ) );
 		add_action( 'admin_post_sw_mailgate_export_log', array( $this, 'export' ) );
 		add_action( 'admin_post_sw_mailgate_resend', array( $this, 'resend' ) );
+		add_action( 'admin_post_sw_mailgate_queue_action', array( $this, 'queue_action' ) );
 		add_action( 'wp_dashboard_setup', array( $this, 'dashboard' ) );
 		add_action( 'admin_notices', array( $this, 'redirection_notice' ) );
 	}
@@ -51,7 +60,7 @@ final class Log_Page {
 			$filters[ $key ] = isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
 		}
 		// phpcs:enable
-		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected', 'partial', 'uncertain' ), true ) ) {
+		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected', 'partial', 'uncertain', 'queued' ), true ) ) {
 			$filters['status'] = '';
 		}
 		return $filters;
@@ -83,6 +92,9 @@ final class Log_Page {
 		$settings    = Settings::get();
 		$delete_data = (bool) get_option( Installer::DELETE_DATA_OPTION );
 		$redirection = Redirection_Settings::get();
+		$failover    = Failover_Settings::get();
+		$queued      = null === $this->queue ? array() : $this->queue->overview();
+		$queue_total = null === $this->queue ? 0 : $this->queue->count();
 		include SW_MAILGATE_DIR . 'templates/admin/settings.php';
 	}
 
@@ -100,6 +112,19 @@ final class Log_Page {
 		if ( null !== $error ) {
 			wp_die( esc_html( $error->get_error_message() ) );
 		}
+		$error = Failover_Settings::save(
+			array(
+				'breaker_threshold' => isset( $_POST['breaker_threshold'] ) ? absint( $_POST['breaker_threshold'] ) : 3,
+				'breaker_cooldown'  => isset( $_POST['breaker_cooldown'] ) ? absint( $_POST['breaker_cooldown'] ) : 10,
+				'timeout_failover'  => isset( $_POST['timeout_failover'] ),
+				'alert_email'       => isset( $_POST['alert_email'] ) && is_string( $_POST['alert_email'] ) ? sanitize_text_field( wp_unslash( $_POST['alert_email'] ) ) : '',
+				'queue_enabled'     => isset( $_POST['queue_enabled'] ),
+				'queue_hours'       => isset( $_POST['queue_hours'] ) ? absint( $_POST['queue_hours'] ) : 24,
+			)
+		);
+		if ( null !== $error ) {
+			wp_die( esc_html( $error->get_error_message() ) );
+		}
 		Settings::save(
 			array(
 				'store_body'      => isset( $_POST['store_body'] ),
@@ -109,6 +134,22 @@ final class Log_Page {
 		);
 		update_option( Installer::DELETE_DATA_OPTION, isset( $_POST['delete_data'] ), false );
 		wp_safe_redirect( Admin_Page::url( array( 'saved' => '1' ), self::SETTINGS_SLUG ) );
+		exit;
+	}
+
+	/**
+	 * Retries all waiting messages now, or discards them.
+	 */
+	public function queue_action(): void {
+		$this->authorize();
+		check_admin_referer( 'sw_mailgate_queue_action' );
+		$action = isset( $_POST['queue_action'] ) ? sanitize_key( wp_unslash( $_POST['queue_action'] ) ) : '';
+		if ( null !== $this->queue && null !== $this->dispatcher && 'retry' === $action ) {
+			$this->queue->process( $this->dispatcher, true );
+		} elseif ( null !== $this->queue && 'discard' === $action ) {
+			$this->queue->clear();
+		}
+		wp_safe_redirect( Admin_Page::url( array( 'queue' => 'retry' === $action ? 'retried' : 'discarded' ), self::SETTINGS_SLUG ) );
 		exit;
 	}
 
@@ -236,6 +277,11 @@ final class Log_Page {
 				/* translators: 1: partially delivered messages, 2: messages with uncertain delivery */
 				echo '<p>' . esc_html( sprintf( __( '%1$d partial deliveries, %2$d uncertain deliveries. Check outcomes before retrying.', 'sw-mailgate' ), $totals['partial'] ?? 0, $totals['uncertain'] ?? 0 ) ) . '</p>';
 			}
+		}
+		$waiting = null === $this->queue ? 0 : $this->queue->count();
+		if ( $waiting > 0 ) {
+			/* translators: %d: number of messages */
+			echo '<p>' . esc_html( sprintf( _n( '%d message is waiting in the retry queue.', '%d messages are waiting in the retry queue.', $waiting, 'sw-mailgate' ), $waiting ) ) . '</p>';
 		}
 		echo '<a href="' . esc_url( Admin_Page::url( array(), self::SLUG ) ) . '">' . esc_html__( 'View mail log', 'sw-mailgate' ) . '</a>';
 	}
