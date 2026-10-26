@@ -75,3 +75,27 @@ binary attachments, regional hosts, read-only domain tests, encrypted keys and
 wp-config overrides, TLS/timeouts/redirect settings, HTTP and transport failure
 classification, ambiguous successful responses, safe diagnostics, redirection,
 admin fields/test actions, logging opt-in and uninstall cleanup.
+
+Issue #6, #12 and #13 regressions:
+
+```sh
+php tests/multisite-batches.php
+php tests/integration.php enabled issues smtp
+php tests/integration.php enabled issues editor
+php tests/integration.php enabled issues editor-false
+php tests/integration.php enabled multisite setup
+php tests/integration.php enabled multisite run
+```
+
+Use the same disposable `WP_ROOT` / `WP_DB_*` configuration. SMTP cases run actual
+PHPMailer and SMTP protocol handling with scripted I/O, covering mixed/all-recipient
+rejections, DATA rejection/response loss, QUIT/RSET, post-acceptance callbacks/cleanup,
+failover, explicit log states and disabled PHPMailer exceptions. No SMTP network
+connection is made. Editor cases parse the generated HTML and exercise the real
+save handler, including conflicting constants and forged locked-field submissions.
+
+The multisite setup creates a network under the separate `swmg_multisite_` table
+prefix; run it before the multisite test. Real WordPress site switching, role caches,
+per-site options/tables and hook failures are exercised on four sites. The standalone
+batch test additionally checks 205 simulated sites across three bounded queries and
+supports a staged release directory as its optional argument.

@@ -112,7 +112,7 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 				$input_id = 'swmg-field-' . $field->key;
 				$hint     = $locked_hint( $connection, $field->key );
 				$locked   = '' !== $hint;
-				$value    = (string) ( $settings[ $field->key ] ?? $field->default );
+				$value    = $field->secret ? '' : ( $locked ? $connection->get( $field->key, $field->default ) : (string) ( $settings[ $field->key ] ?? $field->default ) );
 				?>
 				<tr>
 					<th scope="row"><label for="<?php echo esc_attr( $input_id ); ?>"><?php echo esc_html( $field->label ); ?><?php echo $field->required ? ' *' : ''; ?></label></th>
@@ -131,7 +131,7 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 								<?php endforeach; ?>
 							</select>
 						<?php elseif ( Field::CHECKBOX === $field->type ) : ?>
-							<input type="checkbox" id="<?php echo esc_attr( $input_id ); ?>" name="settings[<?php echo esc_attr( $field->key ); ?>]" value="1" <?php checked( '1', $value ); ?> <?php disabled( $locked ); ?>>
+							<input type="checkbox" id="<?php echo esc_attr( $input_id ); ?>" name="settings[<?php echo esc_attr( $field->key ); ?>]" value="1" <?php checked( $field->is_checked( $value ) ); ?> <?php disabled( $locked ); ?>>
 						<?php else : ?>
 							<input type="<?php echo esc_attr( $field->type ); ?>" id="<?php echo esc_attr( $input_id ); ?>" name="settings[<?php echo esc_attr( $field->key ); ?>]"
 								class="<?php echo esc_attr( Field::NUMBER === $field->type ? 'small-text' : 'regular-text' ); ?>" value="<?php echo esc_attr( $value ); ?>" <?php disabled( $locked ); ?>>

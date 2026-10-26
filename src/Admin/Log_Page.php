@@ -51,7 +51,7 @@ final class Log_Page {
 			$filters[ $key ] = isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
 		}
 		// phpcs:enable
-		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected' ), true ) ) {
+		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected', 'partial', 'uncertain' ), true ) ) {
 			$filters['status'] = '';
 		}
 		return $filters;
@@ -232,6 +232,10 @@ final class Log_Page {
 				/* translators: 1: days, 2: sent messages, 3: failed messages */
 				esc_html( sprintf( __( 'Last %1$d days: %2$d sent, %3$d failed.', 'sw-mailgate' ), $days, $totals['sent'], $totals['failed'] ) )
 			);
+			if ( ! empty( $totals['partial'] ) || ! empty( $totals['uncertain'] ) ) {
+				/* translators: 1: partially delivered messages, 2: messages with uncertain delivery */
+				echo '<p>' . esc_html( sprintf( __( '%1$d partial deliveries, %2$d uncertain deliveries. Check outcomes before retrying.', 'sw-mailgate' ), $totals['partial'] ?? 0, $totals['uncertain'] ?? 0 ) ) . '</p>';
+			}
 		}
 		echo '<a href="' . esc_url( Admin_Page::url( array(), self::SLUG ) ) . '">' . esc_html__( 'View mail log', 'sw-mailgate' ) . '</a>';
 	}

@@ -3,8 +3,8 @@
  * Outcome of one send or connection-test attempt.
  *
  * The error class decides whether the failover chain may try the next connection:
- * transient and auth errors are connection problems, permanent errors concern the message itself
- * (invalid recipient, rejected content) and would fail on every connection.
+ * transient and auth errors can fail over. Permanent errors concern the message itself;
+ * partial and uncertain delivery must never replay the whole message automatically.
  *
  * @package SWMailgate
  */
@@ -18,6 +18,8 @@ final class Send_Result {
 	public const TRANSIENT = 'transient';
 	public const AUTH      = 'auth';
 	public const PERMANENT = 'permanent';
+	public const PARTIAL   = 'partial';
+	public const UNCERTAIN = 'uncertain';
 
 	/**
 	 * @param list<string> $debug Diagnostic lines without credentials.
@@ -66,7 +68,7 @@ final class Send_Result {
 	}
 
 	public function allows_failover(): bool {
-		return ! $this->success && self::PERMANENT !== $this->error_class;
+		return ! $this->success && in_array( $this->error_class, array( self::TRANSIENT, self::AUTH ), true );
 	}
 
 	public function error_class(): string {

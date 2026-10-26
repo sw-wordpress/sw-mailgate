@@ -62,6 +62,8 @@ final class Log_Table extends \WP_List_Table {
 			match ( $item['status'] ) {
 			'sent'       => __( 'Sent', 'sw-mailgate' ),
 			'redirected' => __( 'Redirected', 'sw-mailgate' ),
+			'partial'    => __( 'Partial delivery', 'sw-mailgate' ),
+			'uncertain'  => __( 'Delivery uncertain', 'sw-mailgate' ),
 			default      => __( 'Failed', 'sw-mailgate' ),
 			}
 		);

@@ -52,6 +52,10 @@ function wp_roles(): object {
 	return (object) array( 'role_objects' => array( $GLOBALS['sw_mailgate_test_role'] ) );
 }
 
+function is_multisite(): bool {
+	return false;
+}
+
 function wp_clear_scheduled_hook( string $hook ): void {
 	$GLOBALS['sw_mailgate_test_cleared_hook'] = $hook;
 }

@@ -42,7 +42,9 @@ final class Logger {
 			$redact    = static fn( string $text ): string => $mask ? self::mask( $text ) : $text;
 			$row       = array(
 				'created_at'          => gmdate( 'Y-m-d H:i:s' ),
-				'status'              => $attempt->result->is_success() ? ( array() !== $attempt->original_to ? 'redirected' : 'sent' ) : 'failed',
+				'status'              => $attempt->result->is_success()
+					? ( array() !== $attempt->original_to ? 'redirected' : 'sent' )
+					: ( in_array( $attempt->result->error_class(), array( 'partial', 'uncertain' ), true ) ? $attempt->result->error_class() : 'failed' ),
 				'connection_id'       => $attempt->connection->id(),
 				'provider'            => $attempt->connection->provider(),
 				'attempt_group'       => $attempt->group,

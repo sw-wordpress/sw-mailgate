@@ -97,4 +97,34 @@ The implementation follows Mailgun's current
 (`GET /v4/domains/{domain}`). The latter supersedes the v3 path in the original
 milestone plan.
 
+## SMTP delivery outcomes and retries
+
+SMTP delivery facts are recorded before PHPMailer runs QUIT or RSET. If the server
+accepts DATA for some recipients but rejects others, `wp_mail()` returns false and
+the log marks the message as **partial delivery**. If the final DATA response is
+lost, the result is **delivery uncertain**. Neither outcome automatically submits
+the whole message through another connection. Check the SMTP server's delivery
+records before manually retrying, since some recipients may already have received it.
+
+All-recipient permanent rejections stop failover. Temporary recipient rejections
+and known failures before submission remain eligible for the next connection.
+Cleanup or callback errors after confirmed acceptance do not cause a second send.
+Log filters and the dashboard distinguish partial/uncertain results from sent/failed;
+the existing wp-config requirement for logging still applies.
+
+## wp-config overrides in the editor
+
+Disabled non-secret provider fields display the effective wp-config value used by
+the transport, including checkbox interpretation. Passwords and API keys stay blank.
+Saving other fields preserves the underlying values and encrypted credentials,
+so removing a constant restores the saved configuration.
+
+## Multisite uninstall
+
+Uninstall evaluates every site's own deletion preference in bounded batches.
+Sites opting into deletion lose their Mailgate options, encrypted credentials,
+capabilities and log table; sites opting out retain their data. Scheduled Mailgate
+tasks are cleared on every site. The caller's site context is restored, including
+when a site hook throws an exception during cleanup.
+
 See [tests/README.md](tests/README.md) for validation instructions.
