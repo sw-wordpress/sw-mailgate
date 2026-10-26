@@ -80,6 +80,7 @@ jobs:
           php tests/integration.php unset mailgun api
           php tests/integration.php enabled mailgun constant
           php tests/integration.php enabled issues smtp
+          php tests/smtp-tls-policy.php
           php tests/integration.php enabled issues editor
           php tests/integration.php enabled issues editor-false
           php tests/integration.php enabled issues secrets

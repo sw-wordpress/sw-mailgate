@@ -109,3 +109,12 @@ prefix; run it before the multisite test. Real WordPress site switching, role ca
 per-site options/tables and hook failures are exercised on four sites. The standalone
 batch test additionally checks 205 simulated sites across three bounded queries and
 supports a staged release directory as its optional argument.
+
+Issue #9's TLS policy regression:
+
+    WP_ROOT=/tmp/wordpress php tests/smtp-tls-policy.php
+
+This standalone test uses OpenSSL and WordPress's PHPMailer, with real STARTTLS
+and implicit TLS handshakes against a loopback fixture. It checks rejection of
+untrusted and mismatched certificates despite inherited insecure options, explicit
+verification opt-out, configured peer names and preservation of trust stores.
