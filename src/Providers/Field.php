@@ -22,6 +22,7 @@ final class Field {
 	 * @param string                $type    One of the type constants.
 	 * @param bool                  $secret  Stored encrypted and never printed back into the form.
 	 * @param array<string, string> $options Value => label, for selects.
+	 * @param list<string>|null     $false_values When provided, only these exact values disable a checkbox.
 	 */
 	public function __construct(
 		public readonly string $key,
@@ -31,12 +32,19 @@ final class Field {
 		public readonly string $default = '',
 		public readonly array $options = array(),
 		public readonly string $description = '',
-		public readonly bool $required = false
+		public readonly bool $required = false,
+		public readonly ?array $false_values = null
 	) {
 	}
 
 	public static function secret( string $key, string $label, string $description = '', bool $required = true ): self {
 		return new self( $key, $label, self::PASSWORD, true, '', array(), $description, $required );
+	}
+
+	public function is_checked( string $value ): bool {
+		return null !== $this->false_values
+			? ! in_array( $value, $this->false_values, true )
+			: in_array( strtolower( $value ), array( '1', 'true', 'yes', 'on' ), true );
 	}
 
 	/**

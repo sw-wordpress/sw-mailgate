@@ -48,6 +48,7 @@ jobs:
           php tests/uninstall.php . delete
           php tests/uninstall.php . preserve
           php tests/uninstall.php . default
+          php tests/multisite-batches.php
       - name: Install WordPress test files
         env:
           WP_VERSION: ${{ matrix.wordpress }}
@@ -78,3 +79,8 @@ jobs:
           php tests/integration.php enabled mailgun api
           php tests/integration.php unset mailgun api
           php tests/integration.php enabled mailgun constant
+          php tests/integration.php enabled issues smtp
+          php tests/integration.php enabled issues editor
+          php tests/integration.php enabled issues editor-false
+          php tests/integration.php enabled multisite setup
+          php tests/integration.php enabled multisite run

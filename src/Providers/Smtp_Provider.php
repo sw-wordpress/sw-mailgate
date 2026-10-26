@@ -51,7 +51,8 @@ final class Smtp_Provider implements Provider {
 				false,
 				'1',
 				array(),
-				__( 'Recommended. Only disable it for trusted networks (e.g. a VPN to the mail server) when the certificate does not match the host. The connection stays encrypted, but the server identity is not checked.', 'sw-mailgate' )
+				__( 'Recommended. Only disable it for trusted networks (e.g. a VPN to the mail server) when the certificate does not match the host. The connection stays encrypted, but the server identity is not checked.', 'sw-mailgate' ),
+				false_values: array( '0' )
 			),
 			new Field(
 				'tls_peer_name',
@@ -81,6 +82,7 @@ final class Smtp_Provider implements Provider {
 		$mailer->Username    = $connection->get( 'username' );
 		$mailer->Password    = $connection->get( 'password' );
 		$mailer->Timeout     = max( 5, (int) $connection->get( 'timeout', '15' ) );
+		$mailer->setSMTPInstance( new Tracked_SMTP() );
 
 		// Connections saved before this option existed have no value: they keep verifying.
 		if ( '0' === $connection->get( 'tls_verify', '1' ) ) {
@@ -105,15 +107,52 @@ final class Smtp_Provider implements Provider {
 		$mailer = $envelope->mailer();
 		$debug  = array();
 		$this->capture_debug( $mailer, $debug );
+		$smtp = $mailer->getSMTPInstance();
+		if ( $smtp instanceof Tracked_SMTP ) {
+			$smtp->reset_tracking();
+		}
 
 		try {
-			$mailer->postSend();
+			if ( ! $mailer->postSend() ) {
+				return $this->delivery_failure( $mailer, $connection, $mailer->ErrorInfo, $debug );
+			}
 			return Send_Result::success( $envelope->message_id(), $debug );
-		} catch ( Exception $e ) {
-			return $this->failure( $mailer, $connection, $e->getMessage(), $debug );
+		} catch ( \Throwable $e ) {
+			return $this->delivery_failure( $mailer, $connection, $e->getMessage(), $debug );
 		} finally {
-			$mailer->smtpClose();
+			$this->close_mailer( $mailer );
 		}
+	}
+
+	/** Resolve delivery certainty before examining transient/connection errors. */
+	private function delivery_failure( Mail_Catcher $mailer, Connection $connection, string $message, array $debug ): Send_Result {
+		$smtp = $mailer->getSMTPInstance();
+		if ( ! $smtp instanceof Tracked_SMTP ) {
+			return Send_Result::failure( Send_Result::UNCERTAIN, __( 'SMTP delivery could not be tracked. Acceptance is unknown; automatic failover was stopped to avoid duplicates.', 'sw-mailgate' ), $debug );
+		}
+		$outcome = $smtp->outcome();
+		if ( $outcome['delivered'] ) {
+			if ( array() !== $outcome['rejected'] ) {
+				return Send_Result::failure( Send_Result::PARTIAL, __( 'SMTP accepted the message for some recipients and rejected others. Automatic failover was stopped to avoid duplicate delivery; check recipient outcomes before retrying.', 'sw-mailgate' ), $debug );
+			}
+			// A callback/cleanup failure after acceptance must not cause a duplicate delivery.
+			return Send_Result::success( $mailer->getLastMessageID(), $debug );
+		}
+		if ( $outcome['submitted'] && ( $outcome['data_code'] < 400 || $outcome['data_code'] >= 600 ) ) {
+			return Send_Result::failure( Send_Result::UNCERTAIN, __( 'SMTP did not confirm acceptance after message submission. Delivery is uncertain; automatic failover was stopped to avoid duplicates.', 'sw-mailgate' ), $debug );
+		}
+		foreach ( $outcome['rejected'] as $code ) {
+			if ( $code >= 500 ) {
+				return Send_Result::failure( Send_Result::PERMANENT, __( 'SMTP permanently rejected one or more recipients. Automatic failover was stopped.', 'sw-mailgate' ), $debug );
+			}
+		}
+		if ( $outcome['data_code'] >= 400 ) {
+			return Send_Result::failure( $outcome['data_code'] >= 500 ? Send_Result::PERMANENT : Send_Result::TRANSIENT, __( 'SMTP rejected message data before accepting delivery.', 'sw-mailgate' ), $debug );
+		}
+		if ( array() !== $outcome['rejected'] ) {
+			return Send_Result::failure( Send_Result::TRANSIENT, __( 'SMTP temporarily rejected the recipients before accepting delivery.', 'sw-mailgate' ), $debug );
+		}
+		return $this->failure( $mailer, $connection, $message, $debug );
 	}
 
 	public function test_connection( Connection $connection ): Send_Result {
@@ -128,7 +167,20 @@ final class Smtp_Provider implements Provider {
 		} catch ( Exception $e ) {
 			return $this->failure( $mailer, $connection, $e->getMessage(), $debug );
 		} finally {
+			$this->close_mailer( $mailer );
+		}
+	}
+
+	/** Cleanup errors must not replace an already established delivery result. */
+	private function close_mailer( Mail_Catcher $mailer ): void {
+		try {
 			$mailer->smtpClose();
+		} catch ( \Throwable $error ) {
+			try {
+				$mailer->getSMTPInstance()->close();
+			} catch ( \Throwable $close_error ) {
+				return;
+			}
 		}
 	}
 

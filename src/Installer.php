@@ -86,6 +86,35 @@ final class Installer {
 	}
 
 	public static function uninstall(): void {
+		if ( ! is_multisite() ) {
+			self::uninstall_site();
+			return;
+		}
+		$offset = 0;
+		do {
+			$sites = get_sites(
+				array(
+					'fields'  => 'ids',
+					'number'  => 100,
+					'offset'  => $offset,
+					'orderby' => 'id',
+					'order'   => 'ASC',
+				)
+			);
+			foreach ( $sites as $site_id ) {
+				switch_to_blog( (int) $site_id );
+				try {
+					self::uninstall_site();
+				} finally {
+					restore_current_blog();
+				}
+			}
+			$offset     += 100;
+			$batch_count = count( $sites );
+		} while ( 100 === $batch_count );
+	}
+
+	private static function uninstall_site(): void {
 		global $wpdb;
 		self::deactivate();
 		if ( ! get_option( self::DELETE_DATA_OPTION ) ) {

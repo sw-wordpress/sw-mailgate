@@ -101,8 +101,8 @@ final class Log_Repository {
 			'failed' => 0,
 		);
 		foreach ( $rows as $row ) {
-			$status             = 'redirected' === $row['status'] ? 'sent' : $row['status'];
-			$totals[ $status ] += (int) $row['total'];
+			$status            = 'redirected' === $row['status'] ? 'sent' : $row['status'];
+			$totals[ $status ] = ( $totals[ $status ] ?? 0 ) + (int) $row['total'];
 		}
 		return $totals;
 	}

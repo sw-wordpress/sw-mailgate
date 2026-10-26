@@ -209,6 +209,9 @@ final class Admin_Page {
 			$secrets
 		);
 		foreach ( $clear_secrets as $key ) {
+			if ( null !== $existing && $existing->is_locked( $key ) ) {
+				continue;
+			}
 			if ( '' === ( $secrets[ $key ] ?? '' ) ) {
 				$this->connections->delete_secret( $id, $key );
 			}

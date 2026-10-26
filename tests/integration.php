@@ -30,6 +30,27 @@ use SWMailgate\Providers\Provider;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Security\Secret_Store;
 
+$issue_mode = ( $argv[2] ?? '' ) === 'issues' ? ( $argv[3] ?? 'smtp' ) : null;
+if ( in_array( $issue_mode, array( 'editor', 'editor-false' ), true ) ) {
+	define( 'SW_MAILGATE_PRIMARY_HOST', 'effective.example.test' );
+	define( 'SW_MAILGATE_PRIMARY_PORT', 2525 );
+	define( 'SW_MAILGATE_PRIMARY_ENCRYPTION', 'ssl' );
+	define( 'SW_MAILGATE_PRIMARY_AUTH', 'editor' === $issue_mode ? 'yes' : false );
+	define( 'SW_MAILGATE_PRIMARY_TLS_VERIFY', 'editor' === $issue_mode ? '0' : false );
+	define( 'SW_MAILGATE_PRIMARY_PASSWORD', 'private-config-password-fixture' );
+	define( 'SW_MAILGATE_MAILGUN_REGION', 'eu' );
+	define( 'SW_MAILGATE_MAILGUN_API_KEY', 'private-config-api-fixture' );
+}
+$multisite_mode = ( $argv[2] ?? '' ) === 'multisite' ? ( $argv[3] ?? 'run' ) : null;
+if ( 'run' === $multisite_mode ) {
+	define( 'MULTISITE', true );
+	define( 'SUBDOMAIN_INSTALL', false );
+	define( 'DOMAIN_CURRENT_SITE', 'mailgate.test' );
+	define( 'PATH_CURRENT_SITE', '/' );
+	define( 'SITE_ID_CURRENT_SITE', 1 );
+	define( 'BLOG_ID_CURRENT_SITE', 1 );
+}
+
 $mailgun_mode = ( $argv[2] ?? '' ) === 'mailgun' ? ( $argv[3] ?? 'api' ) : null;
 if ( 'constant' === $mailgun_mode ) {
 	define( 'SW_MAILGATE_MAILGUN_DOMAIN', 'mg.config.example.test' );
@@ -96,7 +117,8 @@ define( 'WP_HOME', 'https://mailgate.test' );
 define( 'WP_SITEURL', 'https://mailgate.test' );
 $_SERVER['HTTP_HOST'] = 'mailgate.test';
 $_SERVER['REQUEST_METHOD'] = 'GET';
-$table_prefix = 'swmg_test_';
+$_SERVER['REQUEST_URI'] = '/';
+$table_prefix = null !== $multisite_mode ? 'swmg_multisite_' : 'swmg_test_';
 require ABSPATH . 'wp-settings.php';
 require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 ini_set( 'display_errors', '1' );
@@ -159,6 +181,16 @@ $provider = new class() implements Provider {
 add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => array_merge( $providers, array( $provider ) ) );
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
+if ( null !== $issue_mode ) {
+	include __DIR__ . ( 'smtp' === $issue_mode ? '/smtp-delivery.php' : '/editor-overrides.php' );
+	$sw_mailgate_test_complete = true;
+	exit;
+}
+if ( null !== $multisite_mode ) {
+	include __DIR__ . '/multisite.php';
+	$sw_mailgate_test_complete = true;
+	exit;
+}
 if ( null !== $mailgun_mode ) {
 	include __DIR__ . '/mailgun.php';
 	$sw_mailgate_test_complete = true;
