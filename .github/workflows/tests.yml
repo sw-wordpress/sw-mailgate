@@ -59,10 +59,6 @@ jobs:
             curl --fail --location --retry 3 "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o /tmp/wordpress.tar.gz
           fi
           tar -xzf /tmp/wordpress.tar.gz -C /tmp
-      - name: SMTP TLS verification policy
-        env:
-          WP_ROOT: /tmp/wordpress
-        run: php tests/smtp-tls-policy.php
       - name: WordPress and MariaDB integration
         env:
           WP_ROOT: /tmp/wordpress
@@ -84,6 +80,7 @@ jobs:
           php tests/integration.php unset mailgun api
           php tests/integration.php enabled mailgun constant
           php tests/integration.php enabled issues smtp
+          php tests/smtp-tls-policy.php
           php tests/integration.php enabled issues editor
           php tests/integration.php enabled issues editor-false
           php tests/integration.php enabled multisite setup
