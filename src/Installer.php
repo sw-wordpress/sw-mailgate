@@ -22,7 +22,8 @@ use SWMailgate\Routing\Retry_Queue;
 final class Installer {
 
 	/** Bump when the schema or stored data changes; upgrade() runs once per change. */
-	public const DB_VERSION = 3;
+	// Version 4 also migrates the small version marker into WordPress's autoload cache.
+	public const DB_VERSION = 4;
 
 	private const VERSION_OPTION = 'sw_mailgate_db_version';
 
@@ -100,7 +101,7 @@ final class Installer {
 			$role->add_cap( Capabilities::MANAGE );
 		}
 
-		update_option( self::VERSION_OPTION, self::DB_VERSION, false );
+		update_option( self::VERSION_OPTION, self::DB_VERSION, true );
 		Logger::schedule();
 	}
 
