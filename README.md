@@ -1,5 +1,8 @@
 # SW Mailgate
 
+Development: see [tests/README.md](tests/README.md) for the regression suite,
+local Clover coverage and SonarQube Cloud CI setup.
+
 A WordPress mail transport plugin with connection failover and optional delivery logs.
 
 ## Enable logging
