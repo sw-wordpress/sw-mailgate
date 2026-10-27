@@ -146,9 +146,27 @@ if ( ! is_blog_installed() ) {
 }
 wp_set_current_user( (int) get_user_by( 'login', 'testadmin' )->ID );
 require ( getenv( 'SW_MAILGATE_TEST_PLUGIN' ) ?: dirname( __DIR__ ) ) . '/sw-mailgate.php';
+// Simulate an existing v3 installation: the value must change to migrate autoload.
+update_option( 'sw_mailgate_db_version', 3, false );
+wp_set_option_autoload( 'sw_mailgate_db_version', false );
+Installer::maybe_upgrade();
+sw_mailgate_check( Installer::DB_VERSION === (int) get_option( 'sw_mailgate_db_version' ), 'Existing v3 installations upgrade without reactivation.' );
+sw_mailgate_check( isset( wp_load_alloptions( true )['sw_mailgate_db_version'] ), 'Upgraded version marker is autoloaded.' );
+$sw_mailgate_was_installing = wp_installing( false );
+wp_cache_flush();
+// Populate alloptions as a normal WordPress request does, then measure the version check.
+wp_load_alloptions();
+$sw_mailgate_queries_before = $wpdb->num_queries;
+Installer::maybe_upgrade();
+sw_mailgate_check( $sw_mailgate_queries_before === $wpdb->num_queries, 'Steady-state version check performs no SQL query without a persistent object cache.' );
+wp_installing( $sw_mailgate_was_installing );
+delete_option( 'sw_mailgate_db_version' );
+Installer::activate();
+sw_mailgate_check( isset( wp_load_alloptions( true )['sw_mailgate_db_version'] ), 'Fresh installations autoload the version marker.' );
 Installer::activate();
 Installer::activate();
 Installer::maybe_upgrade();
+sw_mailgate_check( isset( wp_load_alloptions( true )['sw_mailgate_db_version'] ), 'Repeated activation preserves version-marker autoload.' );
 // A prior run may have removed the capability; refresh the already loaded WP_User.
 wp_set_current_user( 0 );
 wp_set_current_user( (int) get_user_by( 'login', 'testadmin' )->ID );
