@@ -17,10 +17,13 @@ jobs:
         include:
           - php: '8.2'
             wordpress: '6.8'
+            coverage: false
           - php: '8.2'
             wordpress: latest
+            coverage: true
           - php: '8.4'
             wordpress: latest
+            coverage: false
     services:
       mariadb:
         image: mariadb:11.4
@@ -38,17 +41,10 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mysqli, sodium
           tools: composer:v2
-          coverage: none
+          coverage: ${{ matrix.coverage && 'xdebug' || 'none' }}
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer validate --strict
       - run: composer cs
-      - name: Bootstrap and uninstall regression tests
-        run: |
-          php tests/bootstrap.php
-          php tests/uninstall.php . delete
-          php tests/uninstall.php . preserve
-          php tests/uninstall.php . default
-          php tests/multisite-batches.php
       - name: Install WordPress test files
         env:
           WP_VERSION: ${{ matrix.wordpress }}
@@ -59,43 +55,62 @@ jobs:
             curl --fail --location --retry 3 "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o /tmp/wordpress.tar.gz
           fi
           tar -xzf /tmp/wordpress.tar.gz -C /tmp
-      - name: SMTP diagnostics without mbstring
-        env:
-          WP_ROOT: /tmp/wordpress
-        run: php -n -d disable_functions=mb_check_encoding tests/smtp-diagnostics.php
-      - name: WordPress and MariaDB integration
+      - name: Run all regression scenarios
         env:
           WP_ROOT: /tmp/wordpress
           WP_DB_HOST: 127.0.0.1:3306
+          COLLECT_COVERAGE: ${{ matrix.coverage }}
+          XDEBUG_MODE: coverage
         run: |
-          php tests/integration.php unset
-          php tests/integration.php disabled
-          php tests/integration.php string
-          php tests/integration.php integer
-          php tests/integration.php enabled
-          php tests/integration.php enabled redirection ui
-          php tests/integration.php unset redirection ui
-          php tests/integration.php enabled redirection constant
-          php tests/integration.php enabled redirection empty
-          php tests/integration.php enabled redirection invalid
-          php tests/integration.php enabled redirection invalid-type
-          php tests/integration.php enabled redirection production
-          php tests/integration.php enabled mailgun api
-          php tests/integration.php unset mailgun api
-          php tests/integration.php enabled mailgun constant
-          php tests/integration.php enabled failover run
-          php tests/integration.php enabled issues smtp
-          php tests/smtp-tls-policy.php
-          php tests/integration.php enabled issues editor
-          php tests/integration.php enabled issues editor-false
-          php tests/integration.php enabled issues secrets
-          php tests/integration.php enabled multisite setup
-          php tests/integration.php enabled multisite run
-      - name: Lazy mailer lifecycle in fresh processes
+          if [ "$COLLECT_COVERAGE" = true ]; then
+            php tests/run.php --coverage
+          else
+            php tests/run.php
+          fi
+      - name: Upload Clover coverage
+        if: matrix.coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage
+          path: coverage/clover.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  sonarqube:
+    name: SonarQube Cloud
+    needs: integration
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'push' &&
+       github.ref_name == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: php-coverage
+          path: coverage
+      - name: Check SonarQube configuration
         env:
-          WP_ROOT: /tmp/wordpress
-          WP_DB_HOST: 127.0.0.1:3306
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
         run: |
-          for scenario in idle short-true short-false send foreign smtp retry; do
-            php tests/lazy-loading.php "$scenario"
-          done
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo '::error::Set the SONAR_TOKEN repository secret before running SonarQube analysis.'
+            exit 1
+          fi
+          if [ -z "$SONAR_ORGANIZATION" ]; then
+            echo '::error::Set the SONAR_ORGANIZATION repository variable to your SonarQube Cloud organization key.'
+            exit 1
+          fi
+          test -s coverage/clover.xml
+      - name: Analyze code and import coverage
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        with:
+          args: >-
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

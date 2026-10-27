@@ -4,3 +4,5 @@
 .phpcs.cache
 *.log
 .env
+/coverage/
+/.scannerwork/

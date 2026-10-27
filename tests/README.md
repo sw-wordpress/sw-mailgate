@@ -1,5 +1,55 @@
 # Tests
 
+Run the full regression suite from the repository root after Composer install and
+with the disposable WordPress/database settings described below:
+
+    WP_ROOT=/tmp/wordpress WP_DB_HOST=127.0.0.1:3306 php tests/run.php
+
+Every scenario runs in a fresh PHP process. This preserves constant isolation,
+standalone WordPress stubs and the lazy-loading lifecycle checks.
+
+## Coverage and SonarQube Cloud
+
+Install Xdebug, enable its coverage mode and run:
+
+    XDEBUG_MODE=coverage WP_ROOT=/tmp/wordpress WP_DB_HOST=127.0.0.1:3306 php tests/run.php --coverage
+
+The development-only php-code-coverage library collects each scenario through an
+auto-prepended bootstrap, merges the process data and writes coverage/clover.xml.
+It includes src/, templates/ and the two plugin entry points, including production
+files never loaded by the tests. WordPress, tests and vendor code are excluded.
+The runner checks that every instrumented scenario produced a fragment and stops
+on test failure or a missing coverage driver. Raw fragments are private local
+build data; only the Clover XML is uploaded as a CI artifact.
+
+The extension-free SMTP diagnostic regression still runs with php -n. Coverage
+adds a second diagnostic run with the driver loaded and mb_check_encoding disabled.
+The test SMTP server subprocesses are fixtures, outside the measured source scope.
+
+CI collects coverage on PHP 8.2 with current WordPress and runs the full suite on
+the other PHP/WordPress combinations without instrumentation. Once all matrix
+jobs pass, the scanner imports the Clover artifact for master and same-repository
+pull requests. Relative source paths keep the report portable between jobs.
+Fork pull requests run the tests and produce the artifact without requiring secrets.
+
+One-time repository setup:
+
+1. In GitHub Settings > Secrets and variables > Actions, create SONAR_TOKEN as a
+   repository secret with permission to analyze the existing project.
+2. Create SONAR_ORGANIZATION as a repository variable containing the SonarQube
+   Cloud organization key (not its display name).
+3. In SonarQube Cloud > Project Administration > Analysis Method, turn automatic
+   analysis off. Coverage requires CI-based analysis.
+4. Confirm that sonar.projectKey in sonar-project.properties matches the project;
+   the linked project is sw-wordpress_sw-mailgate.
+
+The scan reports an explicit configuration error if either GitHub setting is
+missing. Do not place tokens in source files or pass them through test scripts.
+The existing SonarQube quality gate continues to control its analysis check;
+this change does not add an arbitrary coverage threshold.
+
+See the official [PHP coverage guide](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/test-coverage/php-test-coverage).
+
 Issue #8's SMTP diagnostic regression runs without PHP extensions loaded:
 
     WP_ROOT=/tmp/wordpress php -n -d disable_functions=mb_check_encoding tests/smtp-diagnostics.php

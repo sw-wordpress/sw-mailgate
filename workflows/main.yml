@@ -90,6 +90,9 @@ jobs:
             --exclude='/.phpcs.cache' \
             --exclude='/vendor/' \
             --exclude='/tests/' \
+            --exclude='/coverage/' \
+            --exclude='/.scannerwork/' \
+            --exclude='/sonar-project.properties' \
             --exclude='/node_modules/' \
             --exclude='/.env*' \
             --exclude='*.log' \
