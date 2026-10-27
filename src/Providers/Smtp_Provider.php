@@ -14,6 +14,7 @@ use PHPMailer\PHPMailer\SMTP;
 use SWMailgate\Connections\Connection;
 use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
+use SWMailgate\Mail\Mailer_Factory;
 
 final class Smtp_Provider implements Provider {
 
@@ -156,7 +157,7 @@ final class Smtp_Provider implements Provider {
 	}
 
 	public function test_connection( Connection $connection ): Send_Result {
-		$mailer = new Mail_Catcher( true );
+		$mailer = Mailer_Factory::create();
 		$this->prepare( $mailer, $connection );
 		$debug = array();
 		$this->capture_debug( $mailer, $debug );

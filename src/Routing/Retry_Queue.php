@@ -16,6 +16,7 @@ namespace SWMailgate\Routing;
 use SWMailgate\Logging\Log_Repository;
 use SWMailgate\Mail\Dispatcher;
 use SWMailgate\Mail\Mail_Catcher;
+use SWMailgate\Mail\Mailer_Factory;
 use SWMailgate\Security\Secret_Store;
 
 // phpcs:disable WordPress.DB.DirectDatabaseQuery -- This class owns a custom table; claims and deletes must take effect immediately.
@@ -346,7 +347,7 @@ final class Retry_Queue {
 	 * Rebuilds the message. wp_mail() filters and phpmailer_init already ran when it was queued.
 	 */
 	private function mailer( array $payload ): Mail_Catcher {
-		$mailer              = new Mail_Catcher( true );
+		$mailer              = Mailer_Factory::create();
 		$mailer->CharSet     = (string) $payload['charset'];
 		$mailer->ContentType = (string) $payload['content_type'];
 		$mailer->Encoding    = (string) $payload['encoding'];

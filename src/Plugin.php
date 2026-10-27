@@ -13,6 +13,7 @@ use SWMailgate\Admin\Admin_Page;
 use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Mail\Dispatcher;
 use SWMailgate\Mail\Mail_Catcher;
+use SWMailgate\Mail\Mailer_Factory;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Smtp_Provider;
 use SWMailgate\Providers\Mailgun_Provider;
@@ -59,8 +60,8 @@ final class Plugin {
 		$queue->register( $this->dispatcher );
 		( new Failure_Alert( $this->dispatcher ) )->register();
 
-		// Late, so the catcher wins over plugins that also replace PHPMailer during plugins_loaded.
-		add_action( 'plugins_loaded', array( $this, 'install_mailer' ), PHP_INT_MAX );
+		// Install just before WordPress selects its mailer, unless sending was short-circuited.
+		add_filter( 'pre_wp_mail', array( $this, 'prepare_mailer' ), PHP_INT_MAX );
 		add_filter( 'wp_mail', array( $this->dispatcher, 'begin_mail' ), 1 );
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
@@ -74,6 +75,14 @@ final class Plugin {
 		load_plugin_textdomain( 'sw-mailgate', false, dirname( plugin_basename( SW_MAILGATE_FILE ) ) . '/languages' );
 	}
 
+	/** @param null|bool $return Whether another filter already handled this mail. */
+	public function prepare_mailer( $return ) {
+		if ( null === $return ) {
+			$this->install_mailer();
+		}
+		return $return;
+	}
+
 	/**
 	 * Puts the Mail_Catcher into the global that wp_mail() reuses. wp_mail() only creates its own
 	 * instance when the global is not a PHPMailer object.
@@ -85,17 +94,9 @@ final class Plugin {
 			return;
 		}
 
-		require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
-		require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
-		require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
-		require_once ABSPATH . WPINC . '/class-wp-phpmailer.php';
-
-		$catcher = new Mail_Catcher( true );
+		$catcher = Mailer_Factory::create();
 		$catcher->set_dispatcher( $this->dispatcher );
 		$catcher->set_redirector( $this->redirector );
-		$catcher::$validator = static function ( $email ) {
-			return (bool) is_email( $email );
-		};
 
 		$phpmailer = $catcher; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Replacing the mailer is the purpose of this plugin.
 	}

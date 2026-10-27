@@ -91,3 +91,11 @@ jobs:
           php tests/integration.php enabled issues secrets
           php tests/integration.php enabled multisite setup
           php tests/integration.php enabled multisite run
+      - name: Lazy mailer lifecycle in fresh processes
+        env:
+          WP_ROOT: /tmp/wordpress
+          WP_DB_HOST: 127.0.0.1:3306
+        run: |
+          for scenario in idle short-true short-false send foreign smtp retry; do
+            php tests/lazy-loading.php "$scenario"
+          done
