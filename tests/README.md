@@ -141,3 +141,27 @@ This standalone test uses OpenSSL and WordPress's PHPMailer, with real STARTTLS
 and implicit TLS handshakes against a loopback fixture. It checks rejection of
 untrusted and mismatched certificates despite inherited insecure options, explicit
 verification opt-out, configured peer names and preservation of trust stores.
+
+## Lazy mailer lifecycle
+
+After `tests/integration.php enabled` has initialized the disposable database, run each
+scenario in a fresh PHP process with the same `WP_ROOT` / `WP_DB_*` configuration:
+
+```sh
+for scenario in idle short-true short-false send foreign smtp retry; do
+  php tests/lazy-loading.php "$scenario" || exit 1
+done
+```
+
+These tests boot the real WordPress plugin lifecycle without manually installing the
+catcher. Idle and intercepted sends must leave PHPMailer unloaded. First and repeated
+sends use a deterministic provider; the competing-mailer case checks a lower-priority
+replacement. The direct SMTP probe uses a closed loopback port. The retry case starts
+with no prior mail operation and delivers a sealed fixture through the cron hook,
+without replaying `wp_mail` filters. No external mail is sent.
+
+PHPMailer is loaded only for an actual send, connection probe or retry. Reading or
+configuring the global mailer before the first send is not supported; configure it
+through the normal WordPress mail hooks instead. A later callback at the same final
+priority can still replace the global mailer; competing mailer plugins are not
+universally interoperable.
