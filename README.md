@@ -157,6 +157,33 @@ Settings that other plugins apply in `phpmailer_init`, such as DKIM signing keys
 belong to the original request and are not applied again on retries. Because WordPress
 cron needs site traffic, use a real system cron for timely retries on quiet sites.
 
+## Google / Gmail and Microsoft 365
+
+Each provider editor includes a detailed setup guide, enhanced into a
+keyboard-accessible modal, with the exact HTTPS redirect URI of that WordPress
+site. It explains client registration, minimum scopes, consent, expiry and
+mailbox scoping. See the [German setup guide](docs/oauth-einrichtung.md).
+
+Gmail uses send-only offline authorization. Microsoft 365 supports delegated
+authorization for the signed-in mailbox and client credentials for a configured
+application mailbox in one global-cloud tenant. Scope application permissions
+in Exchange; the local mailbox setting does not restrict a tenant-wide grant.
+
+Tokens use the encrypted Secret Store, one-time session-bound state, PKCE and
+atomic expiring refresh claims. Changing credentials, tenant, mode or mailbox
+invalidates the cache. Removing local tokens invalidates pending authorizations,
+but does not revoke provider consent.
+Reconnects and token refreshes share a connection claim. A successful reconnect
+advances the credential generation so an older refresh cannot restore a previous
+mailbox. If a refresh is busy, retry connecting after it finishes.
+
+Connection tests acquire tokens without requesting inbox access or sending mail.
+Use a test mail to verify mailbox and Send As permissions. MIME preserves Bcc,
+Reply-To and attachments. Gmail uses the media upload endpoint above 5 MB, with a
+35 MB limit. Graph limits the entire base64 request to 4 MB and returns 202 without
+a remote message ID; acceptance does not confirm delivery. Logging remains
+wp-config opt-in. SMTP/XOAUTH2 and Graph large attachment uploads are not included.
+
 ## wp-config overrides in the editor
 
 Disabled non-secret provider fields display the effective wp-config value used by

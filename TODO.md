@@ -94,12 +94,19 @@ mails and permanent, partial or uncertain results are never queued. See `README.
 
 ## M6 – OAuth providers: Google & Microsoft 365 (0.6.0)
 
-- [ ] `OAuth_Client`: authorization code flow with `state` check, refresh tokens in `Secret_Store`, refresh lock (transient)
-- [ ] `Google_Provider`: Gmail API `users.messages.send` (`raw`, Bcc in MIME), upload endpoint for messages over 5 MB
-- [ ] UI help: `gmail.send` is a restricted scope (internal Workspace app vs. Google verification)
-- [ ] `Office365_Provider`: Graph `sendMail` with MIME, modes *Application* (client credentials) and *Delegated*
-- [ ] UI help: Exchange Application Access Policy / RBAC for Applications; size limit around 4 MB
-- [ ] Optional: SMTP with XOAUTH2 (PHPMailer `OAuthTokenProvider`)
+- [x] OAuth_Client: authorization code flow, session-bound one-time state, PKCE, encrypted tokens and atomic expiring refresh claims
+- [x] Google_Provider: Gmail raw MIME including Bcc, media upload endpoint above 5 MB
+- [x] UI help: gmail.send is sensitive (corrected from restricted); Workspace/internal vs. external verification and testing expiry
+- [x] Office365_Provider: Graph MIME sendMail, delegated and application/client-credentials modes
+- [x] Setup modal: exact site callback, detailed registration/consent/secret instructions, Exchange access policies/RBAC and additive grants, encoded size limits
+- [ ] Optional: SMTP with XOAUTH2 (PHPMailer OAuthTokenProvider)
+
+M6 notes: detailed German instructions are in docs/oauth-einrichtung.md.
+Connection tests acquire tokens only; test mails verify mailbox/Send As rights.
+Delegated Microsoft mode uses the signed-in mailbox, not shared-mailbox delegation.
+Application mode targets one configured mailbox with access scoped by Exchange.
+Automated tests intercept all HTTP and send no external mail; live account consent
+requires the site's own registered OAuth clients.
 
 ## M7 – Webhook tracking (0.7.0)
 

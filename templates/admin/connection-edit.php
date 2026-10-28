@@ -49,6 +49,9 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 	<p><a href="<?php echo esc_url( Admin_Page::url() ); ?>">&larr; <?php esc_html_e( 'Back to connections', 'sw-mailgate' ); ?></a></p>
 
 	<?php require __DIR__ . '/messages.php'; ?>
+	<?php if ( $provider instanceof \SWMailgate\Providers\OAuth_Provider ) : ?>
+		<?php require __DIR__ . '/oauth-setup.php'; ?>
+	<?php endif; ?>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
 		<?php wp_nonce_field( 'sw_mailgate_save_connection' ); ?>
@@ -146,6 +149,32 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 
 		<?php submit_button( $is_new ? __( 'Add connection', 'sw-mailgate' ) : __( 'Save connection', 'sw-mailgate' ) ); ?>
 	</form>
+
+	<?php if ( ! $is_new && $provider instanceof \SWMailgate\Providers\OAuth_Provider ) : ?>
+		<section class="swmg-oauth-account" aria-labelledby="swmg-oauth-account-title">
+			<h2 id="swmg-oauth-account-title"><?php esc_html_e( 'OAuth authorization', 'sw-mailgate' ); ?></h2>
+			<p><?php esc_html_e( 'These actions use the saved connection. Save any changes to client credentials or mode first.', 'sw-mailgate' ); ?></p>
+			<?php $oauth_connected = ( new \SWMailgate\OAuth\OAuth_Client() )->connected( $connection ); ?>
+			<p><strong><?php echo esc_html( $oauth_connected ? __( 'OAuth credentials are stored for this configuration.', 'sw-mailgate' ) : __( 'No current OAuth credentials for this configuration.', 'sw-mailgate' ) ); ?></strong></p>
+			<?php if ( \SWMailgate\OAuth\OAuth_Client::delegated( $connection ) ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="swmg-inline-form">
+					<?php wp_nonce_field( 'sw_mailgate_oauth_' . $connection->id() ); ?>
+					<input type="hidden" name="connection" value="<?php echo esc_attr( $connection->id() ); ?>">
+					<input type="hidden" name="action" value="sw_mailgate_oauth_connect">
+					<?php submit_button( $oauth_connected ? __( 'Reconnect mailbox', 'sw-mailgate' ) : __( 'Connect mailbox', 'sw-mailgate' ), 'secondary', 'submit', false ); ?>
+				</form>
+			<?php else : ?>
+				<p><?php esc_html_e( 'Application mode does not need a browser sign-in. The connection test obtains a token using the saved client credentials.', 'sw-mailgate' ); ?></p>
+			<?php endif; ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="swmg-inline-form">
+				<?php wp_nonce_field( 'sw_mailgate_oauth_' . $connection->id() ); ?>
+				<input type="hidden" name="connection" value="<?php echo esc_attr( $connection->id() ); ?>">
+				<input type="hidden" name="action" value="sw_mailgate_oauth_disconnect">
+				<?php submit_button( __( 'Remove local OAuth credentials', 'sw-mailgate' ), 'secondary', 'submit', false ); ?>
+			</form>
+			<p class="description"><?php esc_html_e( 'Connection tests acquire an OAuth token without sending mail. A token alone does not prove Send As or mailbox access; send a test mail to verify those permissions.', 'sw-mailgate' ); ?></p>
+		</section>
+	<?php endif; ?>
 
 	<?php if ( ! $is_new ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
