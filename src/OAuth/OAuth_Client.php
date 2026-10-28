@@ -64,7 +64,7 @@ final class OAuth_Client {
 		);
 	}
 
-	/** Bind credentials, tenant, mode, mailbox, site and disconnect generation. */
+	/** Bind credentials, tenant, mode, mailbox, site and credential generation. */
 	private function fingerprint( Connection $connection ): string {
 		return hash(
 			'sha256',
@@ -174,12 +174,13 @@ final class OAuth_Client {
 			if ( get_transient( $key ) !== $sealed ) {
 				return $failure;
 			}
-			delete_transient( $key );
 			$connection = ( new Connection_Repository( $this->secrets ) )->find( (string) $payload['connection'] );
 			if ( null === $connection || ! hash_equals( (string) $payload['fingerprint'], $this->fingerprint( $connection ) ) ) {
+				delete_transient( $key );
 				return $failure;
 			}
 			if ( $denied || '' === $code || strlen( $code ) > 4096 || preg_match( '/[\x00-\x1f\x7f]/', $code ) ) {
+				delete_transient( $key );
 				return array(
 					'connection' => $connection,
 					'result'     => Send_Result::failure( Send_Result::AUTH, __( 'Authorization was cancelled or the provider did not return a valid code.', 'sw-mailgate' ) ),
@@ -187,11 +188,34 @@ final class OAuth_Client {
 			}
 			$config = $this->configuration( $connection );
 			if ( $config instanceof Send_Result ) {
+				delete_transient( $key );
 				return array(
 					'connection' => $connection,
 					'result'     => $config,
 				);
 			}
+			return array(
+				'connection' => $connection,
+				'result'     => $this->redeem( $connection, $config, $payload, $key, $sealed, $code ),
+			);
+		} finally {
+			$this->unlock( $lock );
+		}
+	}
+
+	/** Serialize authorization-code exchanges with refreshes for the same connection. */
+	private function redeem( Connection $connection, array $config, array $payload, string $key, string $sealed, string $code ): Send_Result {
+		$lock = $this->lock( 'refresh-' . $connection->id() );
+		if ( null === $lock ) {
+			// Leave the one-time state intact: no code exchange has taken place.
+			return Send_Result::failure( Send_Result::TRANSIENT, __( 'Another request is renewing OAuth credentials. Retry connecting this mailbox shortly.', 'sw-mailgate' ) );
+		}
+		try {
+			if ( get_transient( $key ) !== $sealed || ! $this->unchanged( $connection, (string) $payload['fingerprint'] ) ) {
+				delete_transient( $key );
+				return Send_Result::failure( Send_Result::AUTH, __( 'This authorization was superseded or expired. Start again from the connection editor.', 'sw-mailgate' ) );
+			}
+			delete_transient( $key );
 			$result = $this->exchange(
 				$connection,
 				$config,
@@ -204,10 +228,7 @@ final class OAuth_Client {
 				null,
 				true
 			);
-			return array(
-				'connection' => $connection,
-				'result'     => is_string( $result ) ? Send_Result::success() : $result,
-			);
+			return is_string( $result ) ? Send_Result::success() : $result;
 		} finally {
 			$this->unlock( $lock );
 		}
@@ -303,6 +324,12 @@ final class OAuth_Client {
 		}
 		if ( ! $this->unchanged( $connection, $fingerprint ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'The connection changed during authorization. Start again from its editor.', 'sw-mailgate' ) );
+		}
+		if ( 'authorization_code' === $grant['grant_type'] ) {
+			// Fence out any older exchange that outlived its lock, including a
+			// refresh for the previously connected mailbox or another pending login.
+			$this->secrets->set( Connection::secret_name( $connection->id(), 'oauth_generation' ), bin2hex( random_bytes( 16 ) ) );
+			$fingerprint = $this->fingerprint( $connection );
 		}
 		$this->secrets->set(
 			Connection::secret_name( $connection->id(), 'oauth_tokens' ),

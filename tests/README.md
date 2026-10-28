@@ -11,6 +11,9 @@ rotation, cache/config invalidation, competing/stale refresh claims, disconnect
 during refresh, invalid token/scope responses, 401 renewal, MIME/Bcc, Gmail uploads,
 Graph modes/size limits, safe diagnostics, setup HTML and admin authorization.
 Connection tests deliberately do not claim to verify mailbox permissions.
+Reconnect regressions cover both callback/refresh overlap orders, retrying busy
+state without code consumption, and stale refresh completion after lock expiry.
+Successful reconnects invalidate older pending account authorizations.
 Set SW_MAILGATE_TEST_PREVIEW to an existing directory to export fixture-only
 editor HTML for browser checks.
 

@@ -173,6 +173,9 @@ Tokens use the encrypted Secret Store, one-time session-bound state, PKCE and
 atomic expiring refresh claims. Changing credentials, tenant, mode or mailbox
 invalidates the cache. Removing local tokens invalidates pending authorizations,
 but does not revoke provider consent.
+Reconnects and token refreshes share a connection claim. A successful reconnect
+advances the credential generation so an older refresh cannot restore a previous
+mailbox. If a refresh is busy, retry connecting after it finishes.
 
 Connection tests acquire tokens without requesting inbox access or sending mail.
 Use a test mail to verify mailbox and Send As permissions. MIME preserves Bcc,

@@ -174,6 +174,57 @@ $unlock_method->invoke( $client, $old_claim );
 sw_mailgate_check( $new_claim[1] === get_option( $new_claim[0] ), 'An old claim owner cannot unlock a newer owner.' );
 $unlock_method->invoke( $client, $new_claim );
 
+// A refresh outliving its lease must not restore account A after account B connected.
+$pending = sw_mailgate_oauth_begin( $client, $connection );
+$replacement = null;
+$token_data = array( 'access_token' => 'account-a-stale-access', 'refresh_token' => 'account-a-stale-refresh', 'expires_in' => 3600, 'token_type' => 'Bearer' );
+$on_token = static function () use ( &$on_token, &$token_data, &$replacement, $client, $connection, $pending ): void {
+	$on_token = null;
+	$key = '_transient_sw_mailgate_oauth_lock_' . hash( 'sha256', 'refresh-' . $connection->id() );
+	$claim = get_option( $key );
+	$claim['until'] = time() - 1;
+	update_option( $key, $claim, false );
+	$token_data = array( 'access_token' => 'account-b-current-access', 'refresh_token' => 'account-b-current-refresh', 'expires_in' => 3600, 'token_type' => 'Bearer' );
+	$replacement = $client->callback( $pending['state'], 'account-b-code' );
+	$token_data = array( 'access_token' => 'account-a-stale-access', 'refresh_token' => 'account-a-stale-refresh', 'expires_in' => 3600, 'token_type' => 'Bearer' );
+};
+$stale_refresh = $client->access_token( $connection, true );
+$on_token = null;
+$token_data = null;
+$current = json_decode( $secrets->get( Connection::secret_name( 'google', 'oauth_tokens' ) ), true );
+sw_mailgate_check( $replacement['result']->is_success() && $stale_refresh instanceof Send_Result && 'account-b-current-access' === $current['access_token'] && 'account-b-current-refresh' === $current['refresh_token'], 'An old account refresh finishing after its lease expired cannot overwrite a successful account-B reconnect.' );
+
+// Normal overlap: do not redeem B's code while A owns the refresh claim.
+$pending = sw_mailgate_oauth_begin( $client, $connection );
+$overlap = null;
+$token_data = array( 'access_token' => 'account-a-refreshed', 'refresh_token' => 'account-a-refresh', 'expires_in' => 3600, 'token_type' => 'Bearer' );
+$before = $token_count;
+$on_token = static function () use ( &$on_token, &$overlap, $client, $pending ): void {
+	$on_token = null;
+	$overlap = $client->callback( $pending['state'], 'busy-account-b-code' );
+};
+$refresh = $client->access_token( $connection, true );
+$on_token = null;
+sw_mailgate_check( is_string( $refresh ) && Send_Result::TRANSIENT === $overlap['result']->error_class() && $token_count === $before + 1, 'A callback overlapping a refresh reports busy without redeeming the new account code.' );
+$token_data = array( 'access_token' => 'account-b-after-retry', 'refresh_token' => 'account-b-after-retry-refresh', 'expires_in' => 3600, 'token_type' => 'Bearer' );
+sw_mailgate_check( $client->callback( $pending['state'], 'busy-account-b-code' )['result']->is_success() && 'account-b-after-retry' === $client->access_token( $connection ), 'The blocked callback can retry its unconsumed state after the refresh finishes.' );
+
+// Reverse order: a refresh cannot run while the callback exchanges a new code.
+$pending = sw_mailgate_oauth_begin( $client, $connection );
+$superseded = sw_mailgate_oauth_begin( $client, $connection );
+$overlap = null;
+$before = $token_count;
+$on_token = static function () use ( &$on_token, &$overlap, $client, $connection ): void {
+	$on_token = null;
+	$overlap = $client->access_token( $connection, true );
+};
+$replacement = $client->callback( $pending['state'], 'new-account-code' );
+$on_token = null;
+$token_data = null;
+sw_mailgate_check( $replacement['result']->is_success() && $overlap instanceof Send_Result && Send_Result::TRANSIENT === $overlap->error_class() && $token_count === $before + 1, 'A refresh overlapping a callback is serialized by the same connection claim.' );
+$before = $token_count;
+sw_mailgate_check( ! $client->callback( $superseded['state'], 'older-account-code' )['result']->is_success() && $before === $token_count, 'A successful reconnect invalidates other pending account authorizations.' );
+
 $registry = new Provider_Registry( array( $google, $office ) );
 $page = new Admin_Page( $connections, $registry, $secrets, new Dispatcher( $connections, $registry ), new Redirector() );
 foreach ( array( 'google', 'delegated', 'application' ) as $id ) {
