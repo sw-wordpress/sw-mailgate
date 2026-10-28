@@ -38,6 +38,8 @@ foreach ( array( array( 'enabled', 'api' ), array( 'unset', 'api' ), array( 'ena
 	$scenarios[] = array( 'tests/integration.php', $logging, 'mailgun', $mode );
 }
 $scenarios[] = array( 'tests/integration.php', 'enabled', 'failover', 'run' );
+$scenarios[] = array( 'tests/integration.php', 'enabled', 'oauth' );
+$scenarios[] = array( 'tests/integration.php', 'unset', 'oauth' );
 foreach ( array( 'smtp', 'editor', 'editor-false', 'secrets' ) as $mode ) {
 	$scenarios[] = array( 'tests/integration.php', 'enabled', 'issues', $mode );
 }

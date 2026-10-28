@@ -87,6 +87,7 @@ final class Admin_Page {
 			return;
 		}
 		wp_enqueue_style( self::HANDLE, SW_MAILGATE_URL . 'assets/admin.css', array(), SW_MAILGATE_VERSION );
+		wp_enqueue_script( self::HANDLE, SW_MAILGATE_URL . 'assets/admin.js', array(), SW_MAILGATE_VERSION, true );
 	}
 
 	public function key_notice(): void {

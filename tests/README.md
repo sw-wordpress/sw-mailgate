@@ -1,5 +1,19 @@
 # Tests
 
+M6 scenarios are included in the full runner and can be run separately:
+
+    php tests/integration.php enabled oauth
+    php tests/integration.php unset oauth
+
+Real WordPress is used; all HTTP is intercepted and no external mail is sent.
+Tests cover PKCE/state/session binding, replay/denial/expiry, encrypted tokens,
+rotation, cache/config invalidation, competing/stale refresh claims, disconnect
+during refresh, invalid token/scope responses, 401 renewal, MIME/Bcc, Gmail uploads,
+Graph modes/size limits, safe diagnostics, setup HTML and admin authorization.
+Connection tests deliberately do not claim to verify mailbox permissions.
+Set SW_MAILGATE_TEST_PREVIEW to an existing directory to export fixture-only
+editor HTML for browser checks.
+
 Run the full regression suite from the repository root after Composer install and
 with the disposable WordPress/database settings described below:
 

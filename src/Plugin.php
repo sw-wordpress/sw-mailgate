@@ -17,6 +17,9 @@ use SWMailgate\Mail\Mailer_Factory;
 use SWMailgate\Providers\Provider_Registry;
 use SWMailgate\Providers\Smtp_Provider;
 use SWMailgate\Providers\Mailgun_Provider;
+use SWMailgate\Providers\Google_Provider;
+use SWMailgate\Providers\Office365_Provider;
+use SWMailgate\Admin\OAuth_Admin;
 use SWMailgate\Security\Secret_Store;
 use SWMailgate\Logging\Logger;
 use SWMailgate\Logging\Log_Repository;
@@ -47,7 +50,7 @@ final class Plugin {
 
 		$secrets          = new Secret_Store();
 		$connections      = new Connection_Repository( $secrets );
-		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider() ) );
+		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider(), new Google_Provider(), new Office365_Provider() ) );
 		$breaker          = new Circuit_Breaker();
 		$queue            = new Retry_Queue( $secrets );
 		$this->dispatcher = new Dispatcher( $connections, $providers, $breaker, $queue );
@@ -66,6 +69,7 @@ final class Plugin {
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
+			( new OAuth_Admin( $connections ) )->register();
 			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector, $breaker ) )->register();
 			( new Log_Page( $logs, $connections, $queue, $this->dispatcher ) )->register();
 		}
