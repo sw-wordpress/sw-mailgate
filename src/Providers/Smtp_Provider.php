@@ -159,11 +159,18 @@ final class Smtp_Provider implements Provider {
 	public function test_connection( Connection $connection ): Send_Result {
 		$mailer = Mailer_Factory::create();
 		$this->prepare( $mailer, $connection );
+		return $this->test_prepared_connection( $mailer, $connection );
+	}
+
+	/** Test a configured SMTP mailer, including alternative authentication adapters. */
+	public function test_prepared_connection( Mail_Catcher $mailer, Connection $connection ): Send_Result {
 		$debug = array();
 		$this->capture_debug( $mailer, $debug );
 
 		try {
-			$mailer->smtpConnect();
+			if ( ! $mailer->smtpConnect() ) {
+				return $this->failure( $mailer, $connection, $mailer->ErrorInfo, $debug );
+			}
 			return Send_Result::success( '', $debug );
 		} catch ( Exception $e ) {
 			return $this->failure( $mailer, $connection, $e->getMessage(), $debug );

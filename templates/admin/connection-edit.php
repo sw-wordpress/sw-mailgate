@@ -172,7 +172,15 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 				<input type="hidden" name="action" value="sw_mailgate_oauth_disconnect">
 				<?php submit_button( __( 'Remove local OAuth credentials', 'sw-mailgate' ), 'secondary', 'submit', false ); ?>
 			</form>
-			<p class="description"><?php esc_html_e( 'Connection tests acquire an OAuth token without sending mail. A token alone does not prove Send As or mailbox access; send a test mail to verify those permissions.', 'sw-mailgate' ); ?></p>
+			<p class="description">
+			<?php
+			if ( \SWMailgate\OAuth\OAuth_Client::smtp( $provider->id() ) ) {
+				esc_html_e( 'Connection tests verify TLS and XOAUTH2 login without sending mail. Send a test mail to verify sender permissions and delivery.', 'sw-mailgate' );
+			} else {
+				esc_html_e( 'Connection tests acquire an OAuth token without sending mail. A token alone does not prove Send As or mailbox access; send a test mail to verify those permissions.', 'sw-mailgate' );
+			}
+			?>
+			</p>
 		</section>
 	<?php endif; ?>
 

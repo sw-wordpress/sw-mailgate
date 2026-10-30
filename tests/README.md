@@ -10,7 +10,7 @@ Tests cover PKCE/state/session binding, replay/denial/expiry, encrypted tokens,
 rotation, cache/config invalidation, competing/stale refresh claims, disconnect
 during refresh, invalid token/scope responses, 401 renewal, MIME/Bcc, Gmail uploads,
 Graph modes/size limits, safe diagnostics, setup HTML and admin authorization.
-Connection tests deliberately do not claim to verify mailbox permissions.
+API connection tests acquire tokens; SMTP connection tests authenticate without submitting mail. A test mail is still needed to verify sender permissions.
 Reconnect regressions cover both callback/refresh overlap orders, retrying busy
 state without code consumption, and stale refresh completion after lock expiry.
 Successful reconnects invalidate older pending account authorizations.
@@ -232,3 +232,17 @@ configuring the global mailer before the first send is not supported; configure 
 through the normal WordPress mail hooks instead. A later callback at the same final
 priority can still replace the global mailer; competing mailer plugins are not
 universally interoperable.
+
+## SMTP XOAUTH2 regression coverage
+
+The existing `enabled oauth` and `unset oauth` scenarios also include
+`smtp-oauth.php`: real PHPMailer SASL and SMTP transaction code with scripted
+transport I/O and intercepted token requests. Cases cover provider-specific
+scopes, encrypted refresh, login changes, fixed hosts/verified STARTTLS, no
+password-mechanism downgrade, SASL rejection/cancellation, credential redaction,
+SMTP authentication-only tests, failover and partial/uncertain delivery. Both
+WordPress's bundled OAuthTokenProvider and the compatibility copy for older
+WordPress releases are exercised by the supported-version CI matrix.
+`smtp-tls-policy.php` additionally uses a loopback TLS server to verify a real
+XOAUTH2 login and confirm that untrusted certificates or the wrong provider
+hostname prevent any bearer credential from being sent.

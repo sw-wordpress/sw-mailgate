@@ -17,10 +17,12 @@ use SWMailgate\Security\Secret_Store;
 
 final class OAuth_Client {
 
-	public const GOOGLE_SCOPE  = 'https://www.googleapis.com/auth/gmail.send';
-	public const GRAPH_SCOPE   = 'https://graph.microsoft.com/Mail.Send';
-	private const STATE_PREFIX = 'sw_mailgate_oauth_state_';
-	private const LOCK_PREFIX  = '_transient_sw_mailgate_oauth_lock_';
+	public const GOOGLE_SCOPE         = 'https://www.googleapis.com/auth/gmail.send';
+	public const GRAPH_SCOPE          = 'https://graph.microsoft.com/Mail.Send';
+	public const GOOGLE_SMTP_SCOPE    = 'https://mail.google.com/';
+	public const MICROSOFT_SMTP_SCOPE = 'https://outlook.office.com/SMTP.Send';
+	private const STATE_PREFIX        = 'sw_mailgate_oauth_state_';
+	private const LOCK_PREFIX         = '_transient_sw_mailgate_oauth_lock_';
 
 	public function __construct(
 		private readonly Http_Client $http = new Http_Client(),
@@ -28,11 +30,28 @@ final class OAuth_Client {
 	) {}
 
 	public static function supports( string $provider ): bool {
-		return in_array( $provider, array( 'google', 'office365' ), true );
+		return in_array( $provider, array( 'google', 'office365', 'google_smtp', 'office365_smtp' ), true );
+	}
+
+	public static function smtp( string $provider ): bool {
+		return in_array( $provider, array( 'google_smtp', 'office365_smtp' ), true );
+	}
+
+	public static function google( string $provider ): bool {
+		return in_array( $provider, array( 'google', 'google_smtp' ), true );
+	}
+
+	private static function scope( Connection $connection ): string {
+		return match ( $connection->provider() ) {
+			'google_smtp' => self::GOOGLE_SMTP_SCOPE,
+			'office365_smtp' => self::MICROSOFT_SMTP_SCOPE,
+			'google' => self::GOOGLE_SCOPE,
+			default => self::GRAPH_SCOPE,
+		};
 	}
 
 	public static function delegated( Connection $connection ): bool {
-		return 'google' === $connection->provider() || 'delegated' === $connection->get( 'mode', 'delegated' );
+		return self::google( $connection->provider() ) || self::smtp( $connection->provider() ) || 'delegated' === $connection->get( 'mode', 'delegated' );
 	}
 
 	public static function redirect_uri(): string {
@@ -46,7 +65,10 @@ final class OAuth_Client {
 		if ( ! self::supports( $connection->provider() ) || '' === $id || strlen( $id ) > 512 || preg_match( '/[\x00-\x20\x7f]/', $id ) || '' === $secret || preg_match( '/[\x00-\x1f\x7f]/', $secret ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'Save a valid OAuth client ID and client secret first.', 'sw-mailgate' ) );
 		}
-		$google = 'google' === $connection->provider();
+		$google = self::google( $connection->provider() );
+		if ( self::smtp( $connection->provider() ) && ( ! is_email( $connection->get( 'username' ) ) || 'delegated' !== $connection->get( 'mode', 'delegated' ) ) ) {
+			return Send_Result::failure( Send_Result::AUTH, __( 'SMTP OAuth requires a valid mailbox login address and delegated authorization. Application access is available through the Microsoft Graph provider.', 'sw-mailgate' ) );
+		}
 		$tenant = $connection->get( 'tenant_id' );
 		if ( ! $google && ( ! preg_match( '/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iD', $tenant ) || ! in_array( $connection->get( 'mode', 'delegated' ), array( 'delegated', 'application' ), true ) ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'Microsoft 365 requires a directory (tenant) UUID and a valid authorization mode.', 'sw-mailgate' ) );
@@ -60,12 +82,14 @@ final class OAuth_Client {
 			'client_secret' => $secret,
 			'authorize'     => $google ? 'https://accounts.google.com/o/oauth2/v2/auth' : $base . 'authorize',
 			'token'         => $google ? 'https://oauth2.googleapis.com/token' : $base . 'token',
-			'scope'         => $google ? self::GOOGLE_SCOPE : ( self::delegated( $connection ) ? self::GRAPH_SCOPE . ' offline_access' : 'https://graph.microsoft.com/.default' ),
+			'scope'         => $google ? self::scope( $connection ) : ( self::delegated( $connection ) ? self::scope( $connection ) . ' offline_access' : 'https://graph.microsoft.com/.default' ),
 		);
 	}
 
 	/** Bind credentials, tenant, mode, mailbox, site and credential generation. */
 	private function fingerprint( Connection $connection ): string {
+		// Preserve existing API fingerprints; SMTP grants also belong to one login mailbox.
+		$login = self::smtp( $connection->provider() ) ? array( $connection->get( 'username' ) ) : array();
 		return hash(
 			'sha256',
 			wp_json_encode(
@@ -80,6 +104,7 @@ final class OAuth_Client {
 					$connection->get( 'mode', 'delegated' ),
 					$connection->get( 'mailbox' ),
 					$this->secrets->get( Connection::secret_name( $connection->id(), 'oauth_generation' ) ),
+					...$login,
 				)
 			)
 		);
@@ -139,7 +164,7 @@ final class OAuth_Client {
 			'code_challenge'        => rtrim( strtr( base64_encode( hash( 'sha256', $verifier, true ) ), '+/', '-_' ), '=' ),
 			'code_challenge_method' => 'S256',
 		);
-		if ( 'google' === $connection->provider() ) {
+		if ( self::google( $connection->provider() ) ) {
 			$params['access_type'] = 'offline';
 			$params['prompt']      = 'consent';
 		} else {
@@ -316,7 +341,7 @@ final class OAuth_Client {
 			return Send_Result::failure( Send_Result::AUTH, __( 'The provider returned incomplete OAuth credentials. Reconnect and allow offline access.', 'sw-mailgate' ) );
 		}
 		if ( isset( $data['scope'] ) && self::delegated( $connection ) ) {
-			$required = 'google' === $connection->provider() ? self::GOOGLE_SCOPE : self::GRAPH_SCOPE;
+			$required = self::scope( $connection );
 			$scopes   = explode( ' ', (string) $data['scope'] );
 			if ( ! in_array( $required, $scopes, true ) && ! ( 'office365' === $connection->provider() && in_array( 'Mail.Send', $scopes, true ) ) ) {
 				return Send_Result::failure( Send_Result::AUTH, __( 'The required mail sending permission was not granted. Reconnect and approve it.', 'sw-mailgate' ) );

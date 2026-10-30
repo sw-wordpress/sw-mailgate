@@ -99,7 +99,7 @@ mails and permanent, partial or uncertain results are never queued. See `README.
 - [x] UI help: gmail.send is sensitive (corrected from restricted); Workspace/internal vs. external verification and testing expiry
 - [x] Office365_Provider: Graph MIME sendMail, delegated and application/client-credentials modes
 - [x] Setup modal: exact site callback, detailed registration/consent/secret instructions, Exchange access policies/RBAC and additive grants, encoded size limits
-- [ ] Optional: SMTP with XOAUTH2 (PHPMailer OAuthTokenProvider)
+- [x] Optional: SMTP with XOAUTH2 (PHPMailer OAuthTokenProvider), delegated Google and Microsoft 365 connections, verified STARTTLS and SMTP-specific setup guides
 
 M6 notes: detailed German instructions are in docs/oauth-einrichtung.md.
 Connection tests acquire tokens only; test mails verify mailbox/Send As rights.

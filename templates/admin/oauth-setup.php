@@ -16,7 +16,9 @@ defined( 'ABSPATH' ) || exit;
 		<p><code class="swmg-oauth-uri"><?php echo esc_html( \SWMailgate\OAuth\OAuth_Client::redirect_uri() ); ?></code></p>
 		<p><?php esc_html_e( 'Copy this complete URL exactly, including https, host, subdirectory and query string. Each staging, production or multisite site needs its own registered URI. After a site move, update it at the provider and reconnect the mailbox.', 'sw-mailgate' ); ?></p>
 
-		<?php if ( 'google' === $provider->id() ) : ?>
+		<?php if ( \SWMailgate\OAuth\OAuth_Client::smtp( $provider->id() ) ) : ?>
+			<?php require __DIR__ . '/oauth-smtp-setup.php'; ?>
+		<?php elseif ( 'google' === $provider->id() ) : ?>
 			<h3><?php esc_html_e( '1. Create a project and enable Gmail', 'sw-mailgate' ); ?></h3>
 			<ol>
 				<li><?php esc_html_e( 'Open Google Cloud Console, choose a project or create a dedicated project for this WordPress site.', 'sw-mailgate' ); ?> <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Google Cloud Console', 'sw-mailgate' ); ?></a></li>

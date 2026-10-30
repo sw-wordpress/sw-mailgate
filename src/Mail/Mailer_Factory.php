@@ -11,6 +11,14 @@ namespace SWMailgate\Mail;
 
 final class Mailer_Factory {
 
+	/** Older WordPress releases omit this PHPMailer interface from their bundled files. */
+	public static function load_oauth(): void {
+		if ( ! interface_exists( 'PHPMailer\\PHPMailer\\OAuthTokenProvider' ) ) {
+			$file = ABSPATH . WPINC . '/PHPMailer/OAuthTokenProvider.php';
+			require_once is_readable( $file ) ? $file : dirname( __DIR__, 2 ) . '/compat/PHPMailer/OAuthTokenProvider.php';
+		}
+	}
+
 	public static function create(): Mail_Catcher {
 		foreach ( array(
 			'PHPMailer\\PHPMailer\\PHPMailer' => '/PHPMailer/PHPMailer.php',

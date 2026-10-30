@@ -182,7 +182,37 @@ Use a test mail to verify mailbox and Send As permissions. MIME preserves Bcc,
 Reply-To and attachments. Gmail uses the media upload endpoint above 5 MB, with a
 35 MB limit. Graph limits the entire base64 request to 4 MB and returns 202 without
 a remote message ID; acceptance does not confirm delivery. Logging remains
-wp-config opt-in. SMTP/XOAUTH2 and Graph large attachment uploads are not included.
+wp-config opt-in. Graph large attachment uploads are not included.
+
+### SMTP with XOAUTH2
+
+Choose **Google SMTP / XOAUTH2** (`google_smtp`) or **Microsoft 365 SMTP / XOAUTH2**
+(`office365_smtp`) for delegated SMTP submission. Enter the primary mailbox login
+address, OAuth client ID/secret and, for Microsoft, tenant UUID. Save and connect
+the same mailbox. Each connection has its own encrypted grant. Changing the login
+invalidates its tokens and pending authorization; existing API grants remain valid.
+
+SMTP endpoints are fixed to `smtp.gmail.com:587` and `smtp.office365.com:587` with
+mandatory STARTTLS and certificate/host verification, even if old settings or
+wp-config constants specify another host or weaker TLS. No password or LOGIN/PLAIN
+fallback is used. The connection test performs TLS and XOAUTH2 authentication
+without submitting mail; send a test mail to verify sender/Send As permissions.
+Expired tokens refresh automatically. Provider SMTP size/rate limits apply.
+The existing SMTP partial/uncertain-delivery safeguards also apply.
+
+Google SMTP requires the **restricted full-mail scope** `https://mail.google.com/`,
+which permits reading, changing and deleting mail as well as sending. Mailgate
+uses only SMTP, but prefer the Gmail API provider for send-only authorization.
+Microsoft SMTP requires delegated Exchange Online **SMTP.Send**, requested as
+`https://outlook.office.com/SMTP.Send offline_access`, and an SMTP-AUTH-enabled
+mailbox. Graph Mail.Send does not authorize SMTP. Follow tenant policy; use Graph
+when SMTP AUTH is prohibited. Shared-mailbox delegation and SMTP.SendAsApp are
+not implemented. The setup dialog and [German guide](docs/oauth-einrichtung.md)
+explain registration, consent, verification and SMTP AUTH settings.
+
+WordPress versions that omit PHPMailer's OAuthTokenProvider interface use the
+unmodified compatibility copy in `compat/PHPMailer`, distributed under its
+included LGPL-2.1 license. No additional OAuth SDK or PHPMailer runtime is loaded.
 
 ## wp-config overrides in the editor
 
