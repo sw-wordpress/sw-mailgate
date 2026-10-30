@@ -121,6 +121,100 @@ Quellen: [Application RBAC](https://learn.microsoft.com/en-us/exchange/permissio
 [Client-Credentials](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow),
 [Graph sendMail](https://learn.microsoft.com/en-us/graph/api/user-sendmail).
 
+## SMTP mit XOAUTH2
+
+Für SMTP eine eigene Verbindung **Google SMTP / XOAUTH2** oder **Microsoft 365
+SMTP / XOAUTH2** anlegen. API- und SMTP-Tokens sind getrennt; vorhandene
+API-Verbindungen müssen nicht neu autorisiert werden. Die neuen Typen unterstützen
+delegierten Zugriff auf das angemeldete Postfach. SMTP.SendAsApp und
+Shared-Mailbox-Delegation werden nicht unterstützt.
+
+Als **Mailbox login address** die primäre Postfachadresse eintragen, als From
+das Postfach oder einen erlaubten Versandalias. Beim Verbinden mit genau diesem
+Postfach anmelden. Ein anderer From-Absender benötigt die entsprechende
+Alias-/Send-As-Freigabe. Nach Änderung der Login-Adresse speichern und neu verbinden.
+
+### Google SMTP
+
+1. In Google Cloud ein Projekt anlegen oder auswählen. **Google Auth Platform →
+   Branding** mit App-Name, Support-Adresse und Entwicklerkontakt ausfüllen.
+2. Unter **Audience** den internen Workspace-Nutzerkreis oder **External** wählen.
+   Bei externen Test-Apps das sendende Postfach unter **Test users** aufnehmen.
+3. Unter **Data Access** folgenden Scope hinzufügen, gegebenenfalls manuell:
+
+       https://mail.google.com/
+
+   **Dieser Scope ist restricted und umfasst Lesen, Senden, Ändern und endgültiges
+   Löschen von Mail.** Die SMTP-Implementierung nutzt nur Versand, die Freigabe ist
+   trotzdem umfassend. Die Gmail-API-Verbindung mit gmail.send ist die passende
+   Wahl, wenn ausschließlich Senderechte gewünscht sind. Für externe
+   Produktions-Apps können Restricted-Scope-Verifizierung und je nach Verarbeitung
+   eine Sicherheitsprüfung nötig sein. Workspace-Zugriffsrichtlinien beachten.
+   Externe Testing-Refresh-Tokens laufen in der Regel nach sieben Tagen ab.
+4. Unter **Clients → Create client → Web application** einen Client erstellen.
+   Die exakte Redirect-URI aus dem Mailgate-Dialog unter **Authorized redirect
+   URIs** eintragen. JavaScript origins sind nicht nötig.
+5. Client ID und Client secret nach Mailgate übernehmen. Keine App-Passwörter,
+   API-Keys oder Service-Account-Dateien verwenden. Login-Postfach eintragen,
+   speichern und über **Connect mailbox** die Vollzugriffsberechtigung bestätigen.
+6. Verbindung testen und Testmail senden. Endpunkt ist fest `smtp.gmail.com:587`.
+   Gmail-SMTP-Limits gelten; die Gmail-API-Media-Uploads werden nicht verwendet.
+
+Quelle: [Googles SMTP-XOAUTH2-Protokoll und Scope](https://developers.google.com/workspace/gmail/imap/xoauth2-protocol).
+
+### Microsoft 365 SMTP
+
+1. Entra-App wie oben unter **App und Client-Secret** registrieren: Single Tenant,
+   Plattform **Web**, exakte Redirect-URI, Client ID, Tenant-UUID und Secret **Value**.
+2. Unter **API permissions → Add a permission → Office 365 Exchange Online →
+   Delegated permissions** die Berechtigung **SMTP.Send** hinzufügen. Falls nicht
+   sichtbar, unter **APIs my organization uses** nach Office 365 Exchange Online
+   suchen; Resource-ID `00000002-0000-0ff1-ce00-000000000000`.
+   **Microsoft Graph Mail.Send berechtigt nicht zum SMTP-Login.**
+3. Der angeforderte Scope lautet:
+
+       https://outlook.office.com/SMTP.Send offline_access
+
+   Falls die Organisation es verlangt, Administrator-Consent erteilen.
+4. Login-Postfach, Client ID, Tenant-UUID und Secret Value in Mailgate speichern.
+   **Connect mailbox** wählen, mit diesem Postfach anmelden und Zugriff bestätigen.
+5. Der Exchange-Administrator prüft SMTP AUTH für genau dieses Postfach. Im
+   Microsoft-365-Admin-Center: **Users → Active users → Postfach → Mail → Manage
+   email apps → Authenticated SMTP**. Alternativ in Exchange Online PowerShell:
+
+       Get-TransportConfig | Format-List SmtpClientAuthenticationDisabled
+       Get-CASMailbox -Identity mailer@example.org | Format-List SmtpClientAuthenticationDisabled
+
+   Ein leerer Postfachwert erbt die Organisationsvorgabe. Wenn die Richtlinie es
+   erlaubt, SMTP AUTH nur für das Zielpostfach freigeben:
+
+       Set-CASMailbox -Identity mailer@example.org -SmtpClientAuthenticationDisabled $false
+
+   **Security Defaults oder Organisationsrichtlinien können SMTP AUTH blockieren.**
+   Dann den Graph-Provider nutzen; die Mandantensicherheit nicht eigens dafür
+   abschwächen. Basic Authentication oder App-Passwörter sind für XOAUTH2 unnötig.
+6. Verbindung testen und Testmail senden. Der feste Endpunkt ist
+   `smtp.office365.com:587`; Exchange-SMTP-Limits gelten, nicht das Graph-4-MB-Limit.
+
+Quellen: [Microsoft SMTP OAuth](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth),
+[SMTP-AUTH-Konfiguration](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission).
+
+### SMTP-Sicherheit und Fehlerdiagnose
+
+STARTTLS und Zertifikatsprüfung sind verpflichtend. Host, Port, Verschlüsselung und
+Passwort sind bei diesen Verbindungstypen festgelegt; auch entsprechende
+wp-config-Overrides ändern diese Transportvorgaben nicht. Client-Daten und
+Login-Adresse lassen sich weiterhin über die üblichen Konstanten setzen.
+Der Verbindungstest authentifiziert über TLS, ohne MAIL FROM/RCPT/DATA zu senden.
+Erst die Testmail prüft From-/Send-As-Rechte und den tatsächlichen Versand.
+
+Bei **535** die SMTP-Berechtigung, das angemeldete Konto, widerrufene Freigaben und
+Microsofts SMTP-AUTH-Einstellungen prüfen. Bei **redirect_uri_mismatch** die
+registrierte URI vergleichen. Abgelaufene Access-Tokens werden automatisch erneuert.
+Abgelehnte SMTP-Versuche werden auf derselben Verbindung nicht automatisch
+wiederholt; bei Authentifizierungsfehlern darf die Failover-Kette fortsetzen.
+Teilzustellungen oder unbestätigte Annahme nach DATA werden nicht erneut versendet.
+
 ## Tests, Erneuerung und Grenzen
 
 **Test connection** beschafft ein Token und sendet keine Mail. Erst **Send test
@@ -130,7 +224,8 @@ nicht erfolgte Zustellung.
 Gmail verwendet über 5 MB den Media-Upload-Endpunkt und lehnt MIME über 35 MB
 lokal ab. Graph ist auf den gesamten Base64-Request von 4 MB begrenzt; bereits
 kleinere Binäranhänge können damit zu groß sein. Graph-Upload-Sessions für große
-Anhänge und SMTP/XOAUTH2 sind hier nicht enthalten.
+Anhänge sind hier nicht enthalten. SMTP/XOAUTH2 ist als eigener Verbindungstyp
+mit den oben beschriebenen Berechtigungen verfügbar.
 
 Nach Client-/Tenant-/Modus-Wechsel oder geändertem Application-Postfach ist die
 passende neue Autorisierung erforderlich; nach Secret-Rotation im Delegated-Modus

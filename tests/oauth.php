@@ -26,6 +26,7 @@ use SWMailgate\Routing\Failover_Settings;
 use SWMailgate\Security\Secret_Store;
 
 delete_option( Connection_Repository::OPTION );
+delete_option( Secret_Store::OPTION );
 update_option( Failover_Settings::OPTION, array( 'breaker_threshold' => 0, 'queue_enabled' => false ) );
 $settings = array( 'client_id' => 'm6-client', 'tenant_id' => '12345678-1234-1234-1234-123456789abc', 'mode' => 'delegated', 'mailbox' => 'app@example.test' );
 foreach ( array( 'google' => 'google', 'delegated' => 'office365', 'application' => 'office365' ) as $id => $kind ) {
@@ -329,6 +330,8 @@ try {
 	catch ( RuntimeException $error ) { if ( 'oauth-intercept-redirect' !== $error->getMessage() ) { throw $error; } }
 	sw_mailgate_check( ! $client->connected( $connection ), 'The nonce-protected admin disconnect action clears local credentials.' );
 } finally { remove_filter( 'wp_redirect', $stop_redirect ); }
+
+include __DIR__ . '/smtp-oauth.php';
 
 if ( 'enabled' === $logging_mode ) {
 	$rows = $logs->search();

@@ -19,6 +19,7 @@ use SWMailgate\Providers\Smtp_Provider;
 use SWMailgate\Providers\Mailgun_Provider;
 use SWMailgate\Providers\Google_Provider;
 use SWMailgate\Providers\Office365_Provider;
+use SWMailgate\Providers\Smtp_OAuth_Provider;
 use SWMailgate\Admin\OAuth_Admin;
 use SWMailgate\Security\Secret_Store;
 use SWMailgate\Logging\Logger;
@@ -50,7 +51,7 @@ final class Plugin {
 
 		$secrets          = new Secret_Store();
 		$connections      = new Connection_Repository( $secrets );
-		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider(), new Google_Provider(), new Office365_Provider() ) );
+		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider(), new Google_Provider(), new Office365_Provider(), new Smtp_OAuth_Provider(), new Smtp_OAuth_Provider( false ) ) );
 		$breaker          = new Circuit_Breaker();
 		$queue            = new Retry_Queue( $secrets );
 		$this->dispatcher = new Dispatcher( $connections, $providers, $breaker, $queue );
