@@ -1,232 +1,138 @@
 # SW Mailgate
 
-Development: see [tests/README.md](tests/README.md) for the regression suite,
-local Clover coverage and SonarQube Cloud CI setup.
+[![Release](https://img.shields.io/github/v/release/sw-wordpress/sw-mailgate?sort=semver)](https://github.com/sw-wordpress/sw-mailgate/releases)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=sw-wordpress_sw-mailgate&metric=coverage)](https://sonarcloud.io/summary/overall?id=sw-wordpress_sw-mailgate)
+[![SonarQube Issues](https://sonarcloud.io/api/project_badges/measure?project=sw-wordpress_sw-mailgate&metric=vulnerabilities)](https://sonarcloud.io/project/issues?id=sw-wordpress_sw-mailgate&impactSoftwareQualities=SECURITY&resolved=false)
 
-A WordPress mail transport plugin with connection failover and optional delivery logs.
+Sends WordPress mail through [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol),
+[Mailgun](https://www.mailgun.com/), Gmail or Microsoft 365 instead of PHP `mail()`.
+If one connection fails, the next one takes over. Optional delivery logs and staging
+redirection show and control where mail goes.
 
-## Enable logging
+## Features
 
-Logging is **off by default**. To allow it, add this to `wp-config.php` before the
-line that loads `wp-settings.php`:
+- **Failover chain** — Mail goes through the first enabled connection; temporary or login errors move it to the next.
+- **Several providers** — SMTP, Mailgun API, Gmail and Microsoft 365 via API or SMTP with [OAuth 2.0](https://en.wikipedia.org/wiki/OAuth).
+- **Staging redirection** — Sends all mail to one test inbox, with an allowlist for addresses or domains.
+- **Optional delivery log** — Off by default; with address masking, retention, CSV export and resend.
+- **Retry queue** — Keeps mail that no connection could send and retries it later (opt-in).
+- **Encrypted credentials** — Passwords, API keys and tokens are stored encrypted with [libsodium](https://en.wikipedia.org/wiki/Libsodium).
+
+## Languages
+
+English.
+
+## Usage
+
+1. Open **Mailgate → Connections** and under **Add connection** click a provider, e.g. **SMTP** or **Mailgun**.
+2. Enter the provider data and the **From address**, keep **Use this connection** ticked and click **Add connection**.
+3. In the saved connection, click **Test connection (no mail is sent)**, then **Send test mail** to check real delivery.
+4. Optional: add more connections and order them with ↑/↓; later ones are fallbacks.
+5. On staging sites, enter a test inbox under **Mailgate → Settings → Redirect mail to** and click **Save Changes**.
+
+## Configuration
+
+### Requirements
+
+PHP 8.2+ with sodium, WordPress 6.8+, MySQL or MariaDB, single site or multisite; HTTPS for Gmail and Microsoft 365 OAuth.
+
+### Settings
+
+Connections are managed under **Mailgate → Connections**; redirection, log options, failover,
+retry queue and uninstall behaviour under **Mailgate → Settings**. Optional `wp-config.php` constants:
 
 ```php
+// Default: not set (off). Only boolean true enables the delivery log; the admin cannot.
 define( 'SW_MAILGATE_LOG_ENABLED', true );
-```
 
-Only the boolean `true` enables logging. An absent constant, `false`, strings, and
-integers keep logging disabled. Database options and admin form submissions cannot
-enable it. Remove the definition or set it to `false` to stop recording new entries.
-
-The Mailgate settings page shows the current status and controls retention,
-address masking, and optional message body storage. Body storage is off by default;
-it also stays off whenever logging is disabled or address masking is enabled.
-
-Disabling logging preserves existing entries. Daily retention cleanup and the
-WordPress personal data export/erasure tools remain available.
-
-## Redirect mail on staging
-
-Set a target under **Mailgate → Settings**, or force it in `wp-config.php`:
-
-```php
+// Default: not set (admin setting applies). Forces and locks the redirect target; '' disables redirection.
 define( 'SW_MAILGATE_REDIRECT_TO', 'staging-inbox@example.com' );
+
+// Default: not set (key derived from WordPress salts). Dedicated encryption key, at least 32 characters.
+define( 'SW_MAILGATE_KEY', 'a-long-random-string' );
+
+// Default: not set. SW_MAILGATE_<CONNECTION ID>_<FIELD KEY> overrides one field of a connection
+// and locks it in the editor, e.g. for the connection ID "primary":
+define( 'SW_MAILGATE_PRIMARY_PASSWORD', 'smtp-password' );
 ```
 
-The constant overrides and locks the admin target. An empty string explicitly
-disables redirection, including a saved admin target. Invalid targets block sending
-instead of falling back to real recipients. A notice warns administrators when
-redirection is off on a non-production WordPress environment.
+Details on logging, redirection rules and overrides: [docs/configuration.md](docs/configuration.md).
+Failover, circuit breaker and retry queue: [docs/delivery.md](docs/delivery.md).
 
-All non-allowlisted To/Cc/Bcc recipients are replaced by the target, including when
-WordPress uses its native transport without enabled Mailgate connections. Exact
-email addresses or domains can be allowlisted in settings; those recipients retain
-their original To/Cc/Bcc roles. Domain rules do not include subdomains or wildcards.
+### Background tasks
 
-Redirected messages have a `[Redirected]` subject prefix and an `X-Original-To`
-header containing the original visible To/Cc addresses. Bcc addresses never appear
-in this header; Bcc-only messages use `undisclosed-recipients:;` instead. Reply-To
-is preserved.
+WP-Cron deletes expired log entries daily and, while the retry queue holds messages, retries them
+every few minutes. On sites with little traffic or with `DISABLE_WP_CRON`, run WordPress cron from
+the server, e.g. `*/5 * * * * wp cron event run --due-now --path=/path/to/wordpress`.
 
-The authenticated test-mail form can explicitly **ignore redirection** for one
-test, including a forced target. Ordinary mail immediately resumes redirection.
-Logging still requires `SW_MAILGATE_LOG_ENABLED` to be boolean `true`; redirection
-does not enable it. When enabled, logs retain original recipients subject to
-masking, record successful redirected deliveries as `redirected`, and include them
-in sent totals. Failed attempts remain `failed`.
+### Integrations
 
-Resend applies the current redirection rules to the stored delivery recipients;
-it never restores addresses from the original-recipient log field.
+- **Gmail** — Sends via the Gmail API (send-only) or Google SMTP with XOAUTH2.
+- **Microsoft 365** — Sends via Microsoft Graph (signed-in or application mailbox) or SMTP with XOAUTH2.
+- **Mailgun** — Sends via the Mailgun HTTP API, US or EU region.
 
-## Send through Mailgun
+Setup and permissions: [docs/providers.md](docs/providers.md), OAuth step by step (German):
+[docs/oauth-einrichtung.md](docs/oauth-einrichtung.md).
 
-Add a **Mailgun** connection under **Mailgate → Connections**. Enter the Mailgun
-sending domain (for example `mg.example.com`), select its US or EU region, and
-provide an API key. Set the connection's From address to a sender permitted for
-that domain. API keys are encrypted in the existing secret store and are never
-printed back into the editor.
+### Deactivation and removal
 
-The connection test reads domain details and checks that the domain is active;
-it sends no email. The key needs permission to read domain details for this test.
-A sending-only key may permit submission while rejecting that read-only test.
+Deactivating stops the scheduled tasks and keeps all data; WordPress sends mail on its own again.
+Deleting the plugin keeps connections, credentials, settings, logs and queued mail unless
+**Delete connections, credentials, settings and logs when uninstalling** is ticked under
+**Mailgate → Settings**. On multisite, each site's own choice applies. OAuth consent must be
+revoked at Google or Microsoft separately. The WordPress privacy tools export and erase log
+entries and erase queued mail of an address. Details: [docs/configuration.md](docs/configuration.md#multisite-uninstall).
 
-As with SMTP, each field supports an override using the connection ID shown in
-the editor. For a connection whose ID is `primary`, for example:
+## Troubleshooting
 
-```php
-define( 'SW_MAILGATE_PRIMARY_DOMAIN', 'mg.example.com' );
-define( 'SW_MAILGATE_PRIMARY_REGION', 'eu' );
-define( 'SW_MAILGATE_PRIMARY_API_KEY', 'your-mailgun-api-key' );
-define( 'SW_MAILGATE_PRIMARY_TIMEOUT', 15 );
+| Problem | Solution |
+|---|---|
+| Log shows **partial delivery** or **delivery uncertain**. | Some recipients may already have the mail. Check the provider's records before resending; see [docs/delivery.md](docs/delivery.md). |
+| Connection test succeeds, but mail fails. | The test sends nothing. Use **Send test mail** to check sender and Send As permissions. |
+| Mailgun connection test fails with a sending-only key. | The test needs permission to read domain details; sending may still work. |
+| Notice: stored credentials cannot be decrypted. | `SW_MAILGATE_KEY` or the WordPress salts changed. Enter passwords and API keys again. |
+| Notice: the redirection address is invalid. | Mail is blocked until you fix **Redirect mail to** or `SW_MAILGATE_REDIRECT_TO`. |
+| The mail log stays empty. | Logging only works with `define( 'SW_MAILGATE_LOG_ENABLED', true );` in `wp-config.php`. |
+
+## Built with AI
+
+This plugin was implemented with AI assistance. Why it exists and how AI is used:
+[sw-wordpress manifest](https://github.com/sw-wordpress/.github/blob/main/profile/README.md).
+
+AI agents must follow the project rules before changing code:
+
+- Rules and mandatory coverage: [AGENTS.md](AGENTS.md)
+- Current status: [TODO.md](TODO.md)
+- Behaviour and setup details: [docs/](docs/), tests: [tests/README.md](tests/README.md)
+- README structure: [README-STANDARD.md](https://github.com/sw-wordpress/sw-securelogin/blob/master/docs/README-STANDARD.md)
+
+## Development
+
+Requirements: PHP 8.2+ with sodium and mysqli, Composer, a disposable WordPress copy with an empty
+MariaDB/MySQL database for integration tests, and Xdebug for coverage. JavaScript and CSS are plain
+files; there is no build step.
+
+```sh
+composer install
+composer cs                  # WordPress coding standards (composer cs:fix fixes)
+php tests/bootstrap.php      # smoke test of the checkout
+
+# Full regression suite; never point it at a production database
+WP_ROOT=/tmp/wordpress WP_DB_HOST=127.0.0.1:3306 php tests/run.php
+
+# Same with coverage, writes coverage/clover.xml
+XDEBUG_MODE=coverage WP_ROOT=/tmp/wordpress WP_DB_HOST=127.0.0.1:3306 php tests/run.php --coverage
 ```
 
-Mailgun receives the prepared MIME message, preserving HTML, plain alternatives,
-attachments, sender rules and Reply-To. The explicit API envelope includes To,
-Cc and Bcc; Bcc is omitted from the MIME headers. Redirection is applied before
-the API request. Logging still requires the separate wp-config opt-in above.
+Every change needs tests; line coverage must stay above 80 %. Single scenarios, database settings
+and SonarQube setup: [tests/README.md](tests/README.md). GitHub Actions run the suite on every push;
+pushing a version tag builds the release ZIP with [Mozart](https://github.com/coenjacobs/mozart).
 
-Requests use verified HTTPS, fixed regional Mailgun hosts, a 5–60 second timeout
-and no HTTP redirects. Diagnostics include only method, host, HTTP status and
-duration; they omit authentication headers, message content and raw response/error
-text. Successful submissions retain Mailgun's message ID. Authentication failures,
-rate limits, server errors and transport errors follow the existing failover
-classification. A successful HTTP response without a valid message ID stops
-automatic failover because the message may already have been accepted.
+## License
 
-The implementation follows Mailgun's current
-[MIME submission API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages-mime)
-(`POST /v3/{domain}/messages.mime`) and
-[domain-details API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/domains/get-v4-domains--name-)
-(`GET /v4/domains/{domain}`). The latter supersedes the v3 path in the original
-milestone plan.
+[GPL-2.0-or-later](https://www.gnu.org/licenses/gpl-2.0.html) — see [LICENSE](LICENSE). Provided by Stefan Warnat.
 
-## SMTP delivery outcomes and retries
+Bundled third-party components:
 
-SMTP delivery facts are recorded before PHPMailer runs QUIT or RSET. If the server
-accepts DATA for some recipients but rejects others, `wp_mail()` returns false and
-the log marks the message as **partial delivery**. If the final DATA response is
-lost, the result is **delivery uncertain**. Neither outcome automatically submits
-the whole message through another connection. Check the SMTP server's delivery
-records before manually retrying, since some recipients may already have received it.
-
-All-recipient permanent rejections stop failover. Temporary recipient rejections
-and known failures before submission remain eligible for the next connection.
-Cleanup or callback errors after confirmed acceptance do not cause a second send.
-Log filters and the dashboard distinguish partial/uncertain results from sent/failed;
-the existing wp-config requirement for logging still applies.
-
-## Failover hardening
-
-Configure these options under **Mailgate → Settings → Failover**.
-
-**Pausing failing connections (circuit breaker).** After 3 consecutive temporary or
-login errors (configurable; `0` disables it), a connection is skipped for 10 minutes,
-so mails go straight to the next connection instead of waiting for the same timeout.
-After the pause the next mail tries it again; one more failure pauses it again. Rejected,
-partial and uncertain deliveries do not count. If every connection is paused, the whole
-chain is tried anyway, so the breaker never blocks mail. A test mail to a single
-connection always uses it. A success, a successful connection test, saving the
-connection or **Reset and use again** in the connection list closes the breaker.
-While a connection keeps failing, administrators see a notice on every admin page.
-
-**Timeouts.** When an API provider (Mailgun) does not answer after the request was
-sent, it may have accepted the message. By default the next connection is tried,
-which can deliver the message twice. Uncheck **Fail over when an API provider does
-not answer** to report such mails as **delivery uncertain** instead. DNS, connect and
-TLS errors always fail over. SMTP already stops when a submitted message is not
-confirmed (see below).
-
-**Alert mail.** Optionally notify an address when a connection is paused, when it
-works again, and when a queued message is given up. Alerts are sent at the end of
-the request through the other connections.
-
-**Retry queue (off by default).** When every connection failed with temporary or
-login errors, the message is stored encrypted (with the `SW_MAILGATE_KEY` /
-salt-derived key of the credential store) in `{prefix}sw_mailgate_queue` and
-`wp_mail()` reports success. WordPress cron retries it after 5, 15, 30 and
-60 minutes and then every 2–4 hours until it is delivered or expires (24 hours by
-default, at most 72). Each retry runs through the current chain, so every connection
-applies its own sender. Attachments up to 5 MB in total are kept; larger messages are
-not queued and fail as before. Test mails and permanent, partial or uncertain results
-are never queued. The log marks the attempt as **queued** and continues the same
-attempt group with every retry. The settings page lists waiting messages (subject
-and recipient count only) with **Retry now** and **Discard all**; privacy erasure
-removes queued messages of the address.
-
-Settings that other plugins apply in `phpmailer_init`, such as DKIM signing keys,
-belong to the original request and are not applied again on retries. Because WordPress
-cron needs site traffic, use a real system cron for timely retries on quiet sites.
-
-## Google / Gmail and Microsoft 365
-
-Each provider editor includes a detailed setup guide, enhanced into a
-keyboard-accessible modal, with the exact HTTPS redirect URI of that WordPress
-site. It explains client registration, minimum scopes, consent, expiry and
-mailbox scoping. See the [German setup guide](docs/oauth-einrichtung.md).
-
-Gmail uses send-only offline authorization. Microsoft 365 supports delegated
-authorization for the signed-in mailbox and client credentials for a configured
-application mailbox in one global-cloud tenant. Scope application permissions
-in Exchange; the local mailbox setting does not restrict a tenant-wide grant.
-
-Tokens use the encrypted Secret Store, one-time session-bound state, PKCE and
-atomic expiring refresh claims. Changing credentials, tenant, mode or mailbox
-invalidates the cache. Removing local tokens invalidates pending authorizations,
-but does not revoke provider consent.
-Reconnects and token refreshes share a connection claim. A successful reconnect
-advances the credential generation so an older refresh cannot restore a previous
-mailbox. If a refresh is busy, retry connecting after it finishes.
-
-Connection tests acquire tokens without requesting inbox access or sending mail.
-Use a test mail to verify mailbox and Send As permissions. MIME preserves Bcc,
-Reply-To and attachments. Gmail uses the media upload endpoint above 5 MB, with a
-35 MB limit. Graph limits the entire base64 request to 4 MB and returns 202 without
-a remote message ID; acceptance does not confirm delivery. Logging remains
-wp-config opt-in. Graph large attachment uploads are not included.
-
-### SMTP with XOAUTH2
-
-Choose **Google SMTP / XOAUTH2** (`google_smtp`) or **Microsoft 365 SMTP / XOAUTH2**
-(`office365_smtp`) for delegated SMTP submission. Enter the primary mailbox login
-address, OAuth client ID/secret and, for Microsoft, tenant UUID. Save and connect
-the same mailbox. Each connection has its own encrypted grant. Changing the login
-invalidates its tokens and pending authorization; existing API grants remain valid.
-
-SMTP endpoints are fixed to `smtp.gmail.com:587` and `smtp.office365.com:587` with
-mandatory STARTTLS and certificate/host verification, even if old settings or
-wp-config constants specify another host or weaker TLS. No password or LOGIN/PLAIN
-fallback is used. The connection test performs TLS and XOAUTH2 authentication
-without submitting mail; send a test mail to verify sender/Send As permissions.
-Expired tokens refresh automatically. Provider SMTP size/rate limits apply.
-The existing SMTP partial/uncertain-delivery safeguards also apply.
-
-Google SMTP requires the **restricted full-mail scope** `https://mail.google.com/`,
-which permits reading, changing and deleting mail as well as sending. Mailgate
-uses only SMTP, but prefer the Gmail API provider for send-only authorization.
-Microsoft SMTP requires delegated Exchange Online **SMTP.Send**, requested as
-`https://outlook.office.com/SMTP.Send offline_access`, and an SMTP-AUTH-enabled
-mailbox. Graph Mail.Send does not authorize SMTP. Follow tenant policy; use Graph
-when SMTP AUTH is prohibited. Shared-mailbox delegation and SMTP.SendAsApp are
-not implemented. The setup dialog and [German guide](docs/oauth-einrichtung.md)
-explain registration, consent, verification and SMTP AUTH settings.
-
-WordPress versions that omit PHPMailer's OAuthTokenProvider interface use the
-unmodified compatibility copy in `compat/PHPMailer`, distributed under its
-included LGPL-2.1 license. No additional OAuth SDK or PHPMailer runtime is loaded.
-
-## wp-config overrides in the editor
-
-Disabled non-secret provider fields display the effective wp-config value used by
-the transport, including checkbox interpretation. Passwords and API keys stay blank.
-Saving other fields preserves the underlying values and encrypted credentials,
-so removing a constant restores the saved configuration.
-
-## Multisite uninstall
-
-Uninstall evaluates every site's own deletion preference in bounded batches.
-Sites opting into deletion lose their Mailgate options, encrypted credentials,
-capabilities, log table and retry queue; sites opting out retain their data. Scheduled Mailgate
-tasks are cleared on every site. The caller's site context is restored, including
-when a site hook throws an exception during cleanup.
-
-See [tests/README.md](tests/README.md) for validation instructions.
+- [PHPMailer](https://github.com/PHPMailer/PHPMailer) `OAuthTokenProvider` interface (compatibility copy for older WordPress) — LGPL-2.1, license text in `compat/PHPMailer/LICENSE`
+- [Composer](https://getcomposer.org/) class loader (generated autoloader) — MIT, license text in `vendor-prefixed/composer/LICENSE` of the release build
