@@ -62,8 +62,22 @@ One-time repository setup:
 
 The scan reports an explicit configuration error if either GitHub setting is
 missing. Do not place tokens in source files or pass them through test scripts.
-The existing SonarQube quality gate continues to control its analysis check;
-this change does not add an arbitrary coverage threshold.
+The SonarQube quality gate continues to control its analysis check.
+
+### Coverage gate (> 80 % lines, PHP and JavaScript)
+
+`tests/coverage/check.php` reads a Clover report's project metrics and fails when
+line coverage is **not strictly above 80 %** (exactly 80 % fails; integer comparison,
+no rounding). Missing, invalid or empty reports also fail. `tests/coverage-check.php`
+covers the boundaries and is part of `tests/run.php`.
+
+    composer test:coverage   # run.php --coverage, then the PHP gate
+    npm ci && npm run coverage:js   # node:test + c8 for assets/, then the JS gate
+
+PHP measures src/, templates/ and both entry points; JavaScript measures all of
+assets/ (`c8 --all`, reports in coverage/js/). CI enforces both: after the PHP 8.2
+coverage job and in the `javascript` job, whose LCOV report SonarQube imports.
+Do not lower the limit or exclude production files to pass.
 
 See the official [PHP coverage guide](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/test-coverage/php-test-coverage).
 

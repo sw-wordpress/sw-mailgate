@@ -42,6 +42,12 @@
     },
     "scripts": {
         "cs": "phpcs --runtime-set ignore_warnings_on_exit 1",
-        "cs:fix": "phpcbf"
+        "cs:fix": "phpcbf",
+        "coverage:check": "@php tests/coverage/check.php coverage/clover.xml PHP",
+        "test:coverage": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php tests/run.php --coverage",
+            "@coverage:check"
+        ]
     }
 }

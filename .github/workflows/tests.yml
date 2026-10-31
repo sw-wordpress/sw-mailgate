@@ -75,10 +75,36 @@ jobs:
           path: coverage/clover.xml
           if-no-files-found: error
           retention-days: 14
+      - name: Enforce PHP line coverage > 80 %
+        if: matrix.coverage
+        run: php tests/coverage/check.php coverage/clover.xml PHP
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - run: npm ci --no-audit --no-fund
+      - name: Run JavaScript tests and enforce line coverage > 80 %
+        run: npm run coverage:js
+      - name: Upload LCOV coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-coverage
+          path: coverage/js/lcov.info
+          if-no-files-found: error
+          retention-days: 14
 
   sonarqube:
     name: SonarQube Cloud
-    needs: integration
+    needs: [integration, javascript]
     if: >-
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository) ||
@@ -93,6 +119,10 @@ jobs:
         with:
           name: php-coverage
           path: coverage
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-coverage
+          path: coverage/js
       - name: Check SonarQube configuration
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -107,6 +137,7 @@ jobs:
             exit 1
           fi
           test -s coverage/clover.xml
+          test -s coverage/js/lcov.info
       - name: Analyze code and import coverage
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         with:

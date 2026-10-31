@@ -21,6 +21,7 @@ if ( $collect ) {
 }
 
 $scenarios = array(
+	array( 'tests/coverage-check.php' ),
 	array( 'tests/bootstrap.php' ),
 	array( 'tests/uninstall.php', '.', 'delete' ),
 	array( 'tests/uninstall.php', '.', 'preserve' ),
