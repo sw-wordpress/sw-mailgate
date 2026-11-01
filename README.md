@@ -1,8 +1,13 @@
 # SW Mailgate
 
 [![Release](https://img.shields.io/github/v/release/sw-wordpress/sw-mailgate?sort=semver)](https://github.com/sw-wordpress/sw-mailgate/releases)
+[![CI](https://github.com/sw-wordpress/sw-mailgate/actions/workflows/tests.yml/badge.svg)](https://github.com/sw-wordpress/sw-mailgate/actions/workflows/tests.yml)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=sw-wordpress_sw-mailgate&metric=coverage)](https://sonarcloud.io/summary/overall?id=sw-wordpress_sw-mailgate)
 [![SonarQube Issues](https://sonarcloud.io/api/project_badges/measure?project=sw-wordpress_sw-mailgate&metric=vulnerabilities)](https://sonarcloud.io/project/issues?id=sw-wordpress_sw-mailgate&impactSoftwareQualities=SECURITY&resolved=false)
+![PHPStan level 8](https://img.shields.io/badge/phpstan%20level-8%20of%209-brightgreen?style=flat-square&logo=php)
+![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777bb4?style=flat-square&logo=php&logoColor=white)
+![WordPress 6.8+](https://img.shields.io/badge/WordPress-6.8%2B-21759b?style=flat-square&logo=wordpress&logoColor=white)
+[![License GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 Sends WordPress mail through [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol),
 [Mailgun](https://www.mailgun.com/), Gmail or Microsoft 365 instead of PHP `mail()`.
