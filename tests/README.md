@@ -268,5 +268,7 @@ Every push/PR fails on known advisories in shipped dependencies
 test tooling only today). `.github/workflows/security-audit.yml` audits all dependencies
 daily and keeps one open issue labelled `security-audit` (watchers are notified; updates
 only when findings change) and closes it once clean. `.github/dependabot.yml` opens weekly
-update PRs for Composer, npm and GitHub Actions. Enable Dependabot alerts and security
+grouped update PRs (security fixes, routine updates per ecosystem; Composer majors
+individually). Dependabot PRs get no repository secrets, so SonarQube runs for them only
+after merging to master. Enable Dependabot alerts and security
 updates in the repository settings.

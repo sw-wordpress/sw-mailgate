@@ -1,6 +1,7 @@
 version: 2
+# One PR per group: security fixes together, then routine updates per ecosystem.
+# Majors outside these groups still arrive individually, since they may need migration work.
 updates:
-  # No runtime Composer dependencies today; dev tools are grouped.
   - package-ecosystem: composer
     directory: /
     schedule:
@@ -8,7 +9,10 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
-      php-dev-tools:
+      composer-security:
+        applies-to: security-updates
+        patterns: ['*']
+      composer-dev-tools:
         dependency-type: development
         update-types: [minor, patch]
 
@@ -20,9 +24,12 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ['*']
       npm-dev-tools:
         dependency-type: development
-        update-types: [minor, patch]
+        update-types: [minor, patch, major]
 
   - package-ecosystem: github-actions
     directory: /
@@ -32,3 +39,4 @@ updates:
     groups:
       github-actions:
         patterns: ['*']
+        update-types: [minor, patch, major]
