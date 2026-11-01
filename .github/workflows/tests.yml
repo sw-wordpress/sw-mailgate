@@ -47,7 +47,13 @@ jobs:
       - run: composer cs
       - name: Audit shipped Composer dependencies for known vulnerabilities
         if: matrix.coverage
-        run: composer audit --locked --no-dev
+        # Composer errors instead of skipping when the lock file has no runtime packages.
+        run: |
+          if [ "$(php -r 'echo count(json_decode(file_get_contents("composer.lock"), true)["packages"]);')" = 0 ]; then
+            echo 'No runtime Composer packages are shipped; nothing to audit.'
+          else
+            composer audit --locked --no-dev
+          fi
       - name: PHPStan level 8
         if: matrix.coverage
         run: composer stan
