@@ -3,6 +3,8 @@
  * SMTP-specific OAuth registration and troubleshooting, inside the setup dialog.
  *
  * @package SWMailgate
+ *
+ * @var SWMailgate\Providers\OAuth_Provider $provider Set by connection-edit.php.
  */
 
 defined( 'ABSPATH' ) || exit;

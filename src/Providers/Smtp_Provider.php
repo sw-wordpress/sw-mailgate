@@ -125,7 +125,11 @@ final class Smtp_Provider implements Provider {
 		}
 	}
 
-	/** Resolve delivery certainty before examining transient/connection errors. */
+	/**
+	 * Resolve delivery certainty before examining transient/connection errors.
+	 *
+	 * @param list<string> $debug
+	 */
 	private function delivery_failure( Mail_Catcher $mailer, Connection $connection, string $message, array $debug ): Send_Result {
 		$smtp = $mailer->getSMTPInstance();
 		if ( ! $smtp instanceof Tracked_SMTP ) {
@@ -194,6 +198,7 @@ final class Smtp_Provider implements Provider {
 
 	/**
 	 * @param list<string> $debug
+	 * @param list<string> $debug
 	 */
 	private function failure( Mail_Catcher $mailer, Connection $connection, string $message, array $debug ): Send_Result {
 		if ( str_contains( $message, 'did not match expected CN' ) && '' === $connection->get( 'tls_peer_name' ) ) {
@@ -237,6 +242,8 @@ final class Smtp_Provider implements Provider {
 	 * Collects the SMTP dialogue without credentials (AUTH exchange) and without message content (DATA).
 	 *
 	 * @param list<string> $lines Receives the transcript.
+	 * @param list<string> $lines
+	 * @param-out list<string> $lines
 	 */
 	private function capture_debug( Mail_Catcher $mailer, array &$lines ): void {
 		$state               = 'normal';

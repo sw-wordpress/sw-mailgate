@@ -103,11 +103,17 @@ final class Secret_Store {
 	}
 
 	public static function uses_dedicated_key(): bool {
-		return defined( 'SW_MAILGATE_KEY' ) && is_string( SW_MAILGATE_KEY ) && strlen( SW_MAILGATE_KEY ) >= 32;
+		return null !== self::dedicated_key();
+	}
+
+	/** SW_MAILGATE_KEY from wp-config.php when it is a string of at least 32 bytes. */
+	private static function dedicated_key(): ?string {
+		$key = defined( 'SW_MAILGATE_KEY' ) ? constant( 'SW_MAILGATE_KEY' ) : null;
+		return is_string( $key ) && strlen( $key ) >= 32 ? $key : null;
 	}
 
 	/**
-	 * @return array<string, string>
+	 * @return array<mixed> Unvalidated option value; entries are checked when read.
 	 */
 	private function stored(): array {
 		$stored = get_option( self::OPTION, array() );
@@ -141,9 +147,8 @@ final class Secret_Store {
 
 	private function key(): string {
 		if ( null === $this->key ) {
-			$material  = self::uses_dedicated_key()
-				? SW_MAILGATE_KEY
-				: ( defined( 'AUTH_KEY' ) ? AUTH_KEY : '' ) . ( defined( 'SECURE_AUTH_SALT' ) ? SECURE_AUTH_SALT : '' );
+			$material  = self::dedicated_key()
+				?? ( defined( 'AUTH_KEY' ) ? AUTH_KEY : '' ) . ( defined( 'SECURE_AUTH_SALT' ) ? SECURE_AUTH_SALT : '' );
 			$this->key = sodium_crypto_generichash( 'sw-mailgate|' . $material, '', SODIUM_CRYPTO_SECRETBOX_KEYBYTES );
 		}
 		return $this->key;

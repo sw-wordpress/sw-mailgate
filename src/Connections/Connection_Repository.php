@@ -64,7 +64,7 @@ final class Connection_Repository {
 		if ( ! $updated ) {
 			$rows[] = $row;
 		}
-		update_option( self::OPTION, array_values( $rows ), false );
+		update_option( self::OPTION, $rows, false );
 
 		foreach ( $secrets as $key => $value ) {
 			if ( '' !== $value ) {

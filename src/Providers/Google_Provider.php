@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SWMailgate\Providers;
 
 use SWMailgate\Connections\Connection;
+use SWMailgate\Json;
 use SWMailgate\Mail\Envelope;
 
 final class Google_Provider extends OAuth_Provider {
@@ -32,7 +33,7 @@ final class Google_Provider extends OAuth_Provider {
 		$upload = strlen( $mime ) > 5 * MB_IN_BYTES;
 		$url    = $upload ? 'https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media' : 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Gmail API wire format.
-		$body     = $upload ? $mime : wp_json_encode( array( 'raw' => rtrim( strtr( base64_encode( $mime ), '+/', '-_' ), '=' ) ) );
+		$body     = $upload ? $mime : Json::encode( array( 'raw' => rtrim( strtr( base64_encode( $mime ), '+/', '-_' ), '=' ) ) );
 		$response = $this->request( $connection, $url, $body, $upload ? 'message/rfc822' : 'application/json' );
 		if ( $response instanceof Send_Result ) {
 			return $response;

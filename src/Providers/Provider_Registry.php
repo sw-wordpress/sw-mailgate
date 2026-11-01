@@ -39,7 +39,7 @@ final class Provider_Registry {
 			/**
 			 * Filters the available mail providers.
 			 *
-			 * @param Provider[] $providers
+			 * @param array<mixed> $providers Provider instances keyed by ID; other values are ignored.
 			 */
 			$providers = apply_filters( 'sw_mailgate_providers', $this->defaults );
 			foreach ( (array) $providers as $provider ) {

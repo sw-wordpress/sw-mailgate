@@ -103,7 +103,7 @@ final class Mailgun_Provider implements Provider {
 		return Send_Result::success( '', $response['debug'] )->with_duration( $response['duration'] );
 	}
 
-	/** @return array|Send_Result Validated credentials, never included in diagnostics. */
+	/** @return array{base: string, domain: string, key: string, timeout: int, headers: array<string, string>}|Send_Result Validated credentials, never included in diagnostics. */
 	private function configuration( Connection $connection ): array|Send_Result {
 		$domain = strtolower( trim( $connection->get( 'domain' ) ) );
 		$region = $connection->get( 'region', 'us' );
@@ -130,6 +130,9 @@ final class Mailgun_Provider implements Provider {
 		);
 	}
 
+	/**
+	 * @param array{status: int, data: ?array<mixed>, debug: list<string>, duration: float, ambiguous: bool} $response
+	 */
 	private function failure( array $response ): Send_Result {
 		$status  = $response['status'];
 		$message = match ( true ) {

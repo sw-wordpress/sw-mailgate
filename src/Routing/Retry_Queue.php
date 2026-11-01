@@ -51,6 +51,10 @@ final class Retry_Queue {
 		add_action( self::CRON_HOOK, fn() => $this->process( $dispatcher ) );
 	}
 
+	/**
+	 * @param array<mixed> $schedules
+	 * @return array<mixed>
+	 */
 	public static function schedules( array $schedules ): array {
 		$schedules[ self::SCHEDULE ] = array(
 			'interval' => 5 * MINUTE_IN_SECONDS,
@@ -62,8 +66,8 @@ final class Retry_Queue {
 	/**
 	 * Called by the dispatcher when the chain is exhausted with errors that allow failover.
 	 *
-	 * @param array{group: string, number: int, original_to: array, caller: string, substituted_from: ?string, error: string} $meta
-	 * @param int|null                                                                                                        $entry_id Set when the message already comes from the queue.
+	 * @param array{group: string, number: int, original_to: list<string>, caller: string, substituted_from: ?string, error: string} $meta
+	 * @param int|null                                                                                                               $entry_id Set when the message already comes from the queue.
 	 * @return bool True when the message waits for another retry.
 	 */
 	public function defer( Mail_Catcher $template, array $meta, ?int $entry_id ): bool {
@@ -154,9 +158,9 @@ final class Retry_Queue {
 						'entry_id'         => $id,
 						'group'            => (string) $row['attempt_group'],
 						'number'           => (int) $row['attempt_number'],
-						'original_to'      => (array) $payload['original_to'],
+						'original_to'      => array_values( array_filter( (array) $payload['original_to'], 'is_string' ) ),
 						'caller'           => (string) $payload['caller'],
-						'substituted_from' => $payload['substituted_from'],
+						'substituted_from' => is_string( $payload['substituted_from'] ) ? $payload['substituted_from'] : null,
 					)
 				);
 			} catch ( \Throwable $error ) {
@@ -170,7 +174,7 @@ final class Retry_Queue {
 				/**
 				 * Fires when a queued message is given up after a final failure or expiry.
 				 *
-				 * @param array $summary subject, recipients (count), created_at (UTC) and last_error.
+				 * @param array{subject: string, recipients: int, created_at: string, last_error: string} $summary subject, recipients (count), created_at (UTC) and last_error.
 				 */
 				do_action(
 					'sw_mailgate_queue_expired',
@@ -189,6 +193,9 @@ final class Retry_Queue {
 		}
 	}
 
+	/**
+	 * @param array{group: string, number: int, original_to: list<string>, caller: string, substituted_from: ?string, error: string} $meta
+	 */
 	private function enqueue( Mail_Catcher $template, array $meta ): bool {
 		global $wpdb;
 		$attachments = $this->attachments( $template );
@@ -212,7 +219,7 @@ final class Retry_Queue {
 			'encoding'         => $template->Encoding,
 			'headers'          => array_values( $template->getCustomHeaders() ),
 			'attachments'      => $attachments,
-			'original_to'      => array_values( $meta['original_to'] ),
+			'original_to'      => $meta['original_to'],
 			'caller'           => $meta['caller'],
 			'substituted_from' => $meta['substituted_from'],
 		);
@@ -299,6 +306,10 @@ final class Retry_Queue {
 		$wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
 	}
 
+	/**
+	 * @param array<string, mixed> $row
+	 * @return array<mixed>|null
+	 */
 	private function payload( array $row ): ?array {
 		$json    = $this->secrets->open( (string) $row['payload'] );
 		$payload = null === $json ? null : json_decode( $json, true );
@@ -345,6 +356,8 @@ final class Retry_Queue {
 
 	/**
 	 * Rebuilds the message. wp_mail() filters and phpmailer_init already ran when it was queued.
+	 *
+	 * @param array<mixed> $payload
 	 */
 	private function mailer( array $payload ): Mail_Catcher {
 		$mailer              = Mailer_Factory::create();

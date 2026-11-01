@@ -85,7 +85,7 @@ final class Dispatcher {
 	/**
 	 * Sends a message from the retry queue again, continuing its attempt group in the log.
 	 *
-	 * @param array{entry_id: int, group: string, number: int, original_to: array, caller: string, substituted_from: ?string} $context
+	 * @param array{entry_id: int, group: string, number: int, original_to: list<string>, caller: string, substituted_from: ?string} $context
 	 * @return string sent, queued (another retry follows) or failed.
 	 */
 	public function retry( Mail_Catcher $mailer, array $context ): string {
@@ -158,6 +158,7 @@ final class Dispatcher {
 
 	/**
 	 * @throws Exception When no connection delivered the message.
+	 * @param list<string> $original_to
 	 */
 	public function dispatch( Mail_Catcher $template, array $original_to = array() ): bool {
 		$this->attempts = array();
@@ -223,6 +224,8 @@ final class Dispatcher {
 
 	/**
 	 * Hands an undeliverable message to the retry queue. Test mails to one connection are never queued.
+	 *
+	 * @param list<string> $original_to
 	 */
 	private function defer( Mail_Catcher $template, string $group, int $number, array $original_to, string $caller, string $error ): bool {
 		if ( null === $this->queue || ( null !== $this->only && null === $this->retry ) ) {
@@ -257,7 +260,11 @@ final class Dispatcher {
 		return null === $this->breaker ? $chain : $this->breaker->filter( $chain );
 	}
 
-	/** Store only message fields, never SMTP configuration or arbitrary custom headers. */
+	/**
+	 * Store only message fields, never SMTP configuration or arbitrary custom headers.
+	 *
+	 * @return array<string, mixed>|null
+	 */
 	private function payload( Mail_Catcher $mailer ): ?array {
 		$settings = Settings::get();
 		if ( ! $settings['enabled'] || ! $settings['store_body'] || $settings['mask_recipients'] ) {

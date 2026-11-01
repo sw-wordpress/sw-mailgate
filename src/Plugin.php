@@ -80,7 +80,10 @@ final class Plugin {
 		load_plugin_textdomain( 'sw-mailgate', false, dirname( plugin_basename( SW_MAILGATE_FILE ) ) . '/languages' );
 	}
 
-	/** @param null|bool $return Whether another filter already handled this mail. */
+	/**
+	 * @param mixed $return Whether another filter already handled this mail (null|bool).
+	 * @return mixed The unchanged filter value.
+	 */
 	public function prepare_mailer( $return ) {
 		if ( null === $return ) {
 			$this->install_mailer();

@@ -13,6 +13,9 @@ final class Failover_Settings {
 
 	public const OPTION = 'sw_mailgate_failover';
 
+	/**
+	 * @return array<mixed> Defaults merged with the stored (unvalidated) option.
+	 */
 	public static function get(): array {
 		$stored = get_option( self::OPTION, array() );
 		return array_merge(
@@ -28,7 +31,11 @@ final class Failover_Settings {
 		);
 	}
 
-	/** Invalid input leaves the stored preferences unchanged. */
+	/**
+	 * Invalid input leaves the stored preferences unchanged.
+	 *
+	 * @param array<string, mixed> $values
+	 */
 	public static function save( array $values ): ?\WP_Error {
 		$alert = trim( (string) ( $values['alert_email'] ?? '' ) );
 		if ( '' !== $alert && ! is_email( $alert ) ) {
