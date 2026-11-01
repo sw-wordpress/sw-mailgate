@@ -260,3 +260,13 @@ WordPress releases are exercised by the supported-version CI matrix.
 `smtp-tls-policy.php` additionally uses a loopback TLS server to verify a real
 XOAUTH2 login and confirm that untrusted certificates or the wrong provider
 hostname prevent any bearer credential from being sent.
+
+## Dependency security
+
+Every push/PR fails on known advisories in shipped dependencies
+(`composer audit --locked --no-dev`, `npm audit --omit=dev --audit-level=high`; npm is
+test tooling only today). `.github/workflows/security-audit.yml` audits all dependencies
+daily and keeps one open issue labelled `security-audit` (watchers are notified; updates
+only when findings change) and closes it once clean. `.github/dependabot.yml` opens weekly
+update PRs for Composer, npm and GitHub Actions. Enable Dependabot alerts and security
+updates in the repository settings.

@@ -3,6 +3,13 @@
  * Redirection, logging, failover and uninstall preferences; retry queue status.
  *
  * @package SWMailgate
+ *
+ * @var array<mixed> $settings
+ * @var bool $delete_data
+ * @var array{target: string, valid: bool, locked: bool, allowlist: list<string>} $redirection
+ * @var array<mixed> $failover
+ * @var array{subject: string, recipients: int, created_at: string, next_run_at: string, retries: int, last_error: string}[] $queued
+ * @var int $queue_total
  */
 
 defined( 'ABSPATH' ) || exit;

@@ -45,6 +45,18 @@ jobs:
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer validate --strict
       - run: composer cs
+      - name: Audit shipped Composer dependencies for known vulnerabilities
+        if: matrix.coverage
+        # Composer errors instead of skipping when the lock file has no runtime packages.
+        run: |
+          if [ "$(php -r 'echo count(json_decode(file_get_contents("composer.lock"), true)["packages"]);')" = 0 ]; then
+            echo 'No runtime Composer packages are shipped; nothing to audit.'
+          else
+            composer audit --locked --no-dev
+          fi
+      - name: PHPStan level 8
+        if: matrix.coverage
+        run: composer stan
       - name: Install WordPress test files
         env:
           WP_VERSION: ${{ matrix.wordpress }}
@@ -92,6 +104,8 @@ jobs:
           php-version: '8.2'
           coverage: none
       - run: npm ci --no-audit --no-fund
+      - name: Audit shipped npm dependencies for known vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
       - name: Run JavaScript tests and enforce line coverage > 80 %
         run: npm run coverage:js
       - name: Upload LCOV coverage

@@ -139,12 +139,18 @@ final class Circuit_Breaker {
 		}
 	}
 
+	/**
+	 * @param array<string, int|string> $state
+	 */
 	private function store( string $id, array $state ): void {
 		$states        = $this->states();
 		$states[ $id ] = $state;
 		update_option( self::OPTION, $states, false );
 	}
 
+	/**
+	 * @return array<mixed>
+	 */
 	private function states(): array {
 		$states = get_option( self::OPTION, array() );
 		return is_array( $states ) ? $states : array();

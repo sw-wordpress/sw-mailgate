@@ -53,6 +53,9 @@ final class Log_Page {
 		}
 	}
 
+	/**
+	 * @return array{status: string, connection_id: string, date_from: string, date_to: string, s: string}
+	 */
 	public function filters(): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only list/export filters; export verifies a nonce separately.
 		$filters = array();
@@ -101,14 +104,14 @@ final class Log_Page {
 	public function save_settings(): void {
 		$this->authorize();
 		check_admin_referer( 'sw_mailgate_save_settings' );
-		if ( ( isset( $_POST['redirect_to'] ) && ! is_string( $_POST['redirect_to'] ) ) || ( isset( $_POST['redirect_allowlist'] ) && ! is_string( $_POST['redirect_allowlist'] ) ) ) {
-			wp_die( esc_html__( 'Invalid redirection settings.', 'sw-mailgate' ) );
-		}
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Redirection_Settings validates every complete address/domain and rejects invalid input without coercion.
 		$target = isset( $_POST['redirect_to'] ) && is_string( $_POST['redirect_to'] ) ? trim( wp_unslash( $_POST['redirect_to'] ) ) : '';
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Every rule is validated by Redirection_Settings::save().
 		$allowlist = isset( $_POST['redirect_allowlist'] ) && is_string( $_POST['redirect_allowlist'] ) ? wp_unslash( $_POST['redirect_allowlist'] ) : '';
-		$error     = Redirection_Settings::save( $target, $allowlist );
+		if ( ( isset( $_POST['redirect_to'] ) && ! is_string( $_POST['redirect_to'] ) ) || ( isset( $_POST['redirect_allowlist'] ) && ! is_string( $_POST['redirect_allowlist'] ) ) ) {
+			wp_die( esc_html__( 'Invalid redirection settings.', 'sw-mailgate' ) );
+		}
+		$error = Redirection_Settings::save( $target, $allowlist );
 		if ( null !== $error ) {
 			wp_die( esc_html( $error->get_error_message() ) );
 		}
@@ -179,6 +182,9 @@ final class Log_Page {
 		header( 'Content-Disposition: attachment; filename="sw-mailgate-log.csv"' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Output stream, no filesystem access.
 		$stream = fopen( 'php://output', 'w' );
+		if ( false === $stream ) {
+			wp_die( esc_html__( 'The export could not be started.', 'sw-mailgate' ) );
+		}
 		$fields = array( 'id', 'created_at', 'status', 'connection_id', 'provider', 'attempt_group', 'attempt_number', 'from_email', 'recipients', 'original_to', 'subject', 'error_class', 'error_message', 'duration', 'provider_message_id', 'caller' );
 		fputcsv( $stream, $fields, ',', '"', '' );
 		$filters = $this->filters();

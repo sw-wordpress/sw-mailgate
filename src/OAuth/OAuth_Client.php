@@ -12,6 +12,7 @@ namespace SWMailgate\OAuth;
 use SWMailgate\Connections\Connection;
 use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Http\Http_Client;
+use SWMailgate\Json;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Security\Secret_Store;
 
@@ -58,7 +59,7 @@ final class OAuth_Client {
 		return admin_url( 'admin-post.php?action=sw_mailgate_oauth_callback', 'https' );
 	}
 
-	/** @return array|Send_Result Validated configuration, never rendered or logged. */
+	/** @return array{client_id: string, client_secret: string, authorize: string, token: string, scope: string}|Send_Result Validated configuration, never rendered or logged. */
 	private function configuration( Connection $connection ): array|Send_Result {
 		$id     = $connection->get( 'client_id' );
 		$secret = $connection->get( 'client_secret' );
@@ -92,7 +93,7 @@ final class OAuth_Client {
 		$login = self::smtp( $connection->provider() ) ? array( $connection->get( 'username' ) ) : array();
 		return hash(
 			'sha256',
-			wp_json_encode(
+			Json::encode(
 				array(
 					get_current_blog_id(),
 					self::redirect_uri(),
@@ -122,6 +123,9 @@ final class OAuth_Client {
 		return null !== $tokens && ( ! empty( $tokens['refresh_token'] ) || (int) ( $tokens['expires_at'] ?? 0 ) > time() );
 	}
 
+	/**
+	 * @return array<mixed>|null Decoded token record bound to the current fingerprint.
+	 */
 	private function stored( Connection $connection ): ?array {
 		$tokens = json_decode( $this->secrets->get( Connection::secret_name( $connection->id(), 'oauth_tokens' ) ) ?? '', true );
 		return is_array( $tokens ) && isset( $tokens['fingerprint'] ) && hash_equals( $this->fingerprint( $connection ), (string) $tokens['fingerprint'] ) ? $tokens : null;
@@ -151,7 +155,7 @@ final class OAuth_Client {
 			'fingerprint' => $this->fingerprint( $connection ),
 			'verifier'    => $verifier,
 		);
-		if ( ! set_transient( self::STATE_PREFIX . hash( 'sha256', $state ), $this->secrets->seal( wp_json_encode( $payload ) ), 10 * MINUTE_IN_SECONDS ) ) {
+		if ( ! set_transient( self::STATE_PREFIX . hash( 'sha256', $state ), $this->secrets->seal( Json::encode( $payload ) ), 10 * MINUTE_IN_SECONDS ) ) {
 			return Send_Result::failure( Send_Result::TRANSIENT, __( 'OAuth authorization could not be started. Try again.', 'sw-mailgate' ) );
 		}
 		$params = array(
@@ -228,7 +232,12 @@ final class OAuth_Client {
 		}
 	}
 
-	/** Serialize authorization-code exchanges with refreshes for the same connection. */
+	/**
+	 * Serialize authorization-code exchanges with refreshes for the same connection.
+	 *
+	 * @param array{client_id: string, client_secret: string, authorize: string, token: string, scope: string} $config
+	 * @param array<mixed>                                                                                     $payload Decrypted state payload.
+	 */
 	private function redeem( Connection $connection, array $config, array $payload, string $key, string $sealed, string $code ): Send_Result {
 		$lock = $this->lock( 'refresh-' . $connection->id() );
 		if ( null === $lock ) {
@@ -269,7 +278,8 @@ final class OAuth_Client {
 		if ( ! $force && null !== $tokens && (int) ( $tokens['expires_at'] ?? 0 ) > time() + 60 ) {
 			return $tokens['access_token'];
 		}
-		if ( self::delegated( $connection ) && empty( $tokens['refresh_token'] ) ) {
+		$delegated = self::delegated( $connection );
+		if ( $delegated && empty( $tokens['refresh_token'] ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'Connect this mailbox in the connection editor before sending.', 'sw-mailgate' ) );
 		}
 		$lock = $this->lock( 'refresh-' . $connection->id() );
@@ -284,10 +294,10 @@ final class OAuth_Client {
 				return $fresh['access_token'];
 			}
 			$tokens = $fresh;
-			if ( self::delegated( $connection ) && empty( $tokens['refresh_token'] ) ) {
+			if ( $delegated && empty( $tokens['refresh_token'] ) ) {
 				return Send_Result::failure( Send_Result::AUTH, __( 'Reconnect this mailbox before sending.', 'sw-mailgate' ) );
 			}
-			$grant = self::delegated( $connection )
+			$grant = $delegated
 				? array(
 					'grant_type'    => 'refresh_token',
 					'refresh_token' => $tokens['refresh_token'],
@@ -302,6 +312,11 @@ final class OAuth_Client {
 		}
 	}
 
+	/**
+	 * @param array{client_id: string, client_secret: string, authorize: string, token: string, scope: string} $config
+	 * @param array<string, string>                                                                            $grant
+	 * @param array<mixed>|null                                                                                $previous
+	 */
 	private function exchange( Connection $connection, array $config, array $grant, ?array $previous, bool $require_refresh = false ): string|Send_Result {
 		$fingerprint = $this->fingerprint( $connection );
 		$response    = $this->http->request(
@@ -358,7 +373,7 @@ final class OAuth_Client {
 		}
 		$this->secrets->set(
 			Connection::secret_name( $connection->id(), 'oauth_tokens' ),
-			wp_json_encode(
+			Json::encode(
 				array(
 					'fingerprint'   => $fingerprint,
 					'access_token'  => $access,
@@ -377,7 +392,7 @@ final class OAuth_Client {
 	 * Atomic expiring transient claim. DB uniqueness also works across PHP workers
 	 * with persistent object caches; an expired owner cannot release a newer claim.
 	 *
-	 * @return array|null Name/value pair for conditional release.
+	 * @return array{0: string, 1: array{owner: string, until: int}}|null Name/value pair for conditional release.
 	 */
 	private function lock( string $name ): ?array {
 		$key   = self::LOCK_PREFIX . hash( 'sha256', $name );
@@ -397,6 +412,9 @@ final class OAuth_Client {
 		return array( $key, $value );
 	}
 
+	/**
+	 * @param array{0: string, 1: array<mixed>} $lock
+	 */
 	private function unlock( array $lock ): void {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Compare-and-delete protects a newer lock owner.

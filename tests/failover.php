@@ -187,6 +187,57 @@ sw_mailgate_check( array( 'alpha:ok' ) === sw_mailgate_attempted( $plugin_dispat
 // Reset, save and delete clear the state.
 $breaker->close( $connections->find( 'beta' ) );
 sw_mailgate_check( ! $breaker->is_failing( 'beta' ) && in_array( 'beta', $events['recovered'], true ), 'Reset closes the breaker and reports the recovery.' );
+
+// Admin connection actions redirect with one allowlisted notice each.
+$sw_mailgate_action = static function ( string $id, string $action ) use ( $admin ): string {
+	$_POST                = array( 'connection' => $id, 'connection_action' => $action );
+	$_REQUEST['_wpnonce'] = wp_create_nonce( 'sw_mailgate_connection_' . $id );
+	$location             = '';
+	$stop                 = static function ( string $url ) use ( &$location ): never {
+		$location = $url;
+		throw new RuntimeException( 'connection-action-redirect' );
+	};
+	add_filter( 'wp_redirect', $stop );
+	try {
+		$admin->handle_connection_action();
+	} catch ( RuntimeException $error ) {
+		if ( 'connection-action-redirect' !== $error->getMessage() ) {
+			throw $error;
+		}
+	} finally {
+		remove_filter( 'wp_redirect', $stop );
+		$_POST = array();
+	}
+	parse_str( (string) wp_parse_url( $location, PHP_URL_QUERY ), $query );
+	return ( $query['page'] ?? '' ) . ':' . ( $query['swmg_notice'] ?? '' );
+};
+$sw_mailgate_order = static fn(): array => array_map( static fn( Connection $connection ): string => $connection->id(), $connections->all() );
+sw_mailgate_check( 'sw-mailgate:moved' === $sw_mailgate_action( 'alpha', 'down' ) && array( 'beta', 'alpha' ) === $sw_mailgate_order(), 'Moving a connection down changes the failover order.' );
+sw_mailgate_check( 'sw-mailgate:moved' === $sw_mailgate_action( 'alpha', 'up' ) && array( 'alpha', 'beta' ) === $sw_mailgate_order(), 'Moving a connection up restores the failover order.' );
+sw_mailgate_check( 'sw-mailgate:disabled' === $sw_mailgate_action( 'beta', 'disable' ) && ! $connections->find( 'beta' )->is_enabled(), 'Disabling a connection reports it.' );
+sw_mailgate_check( 'sw-mailgate:enabled' === $sw_mailgate_action( 'beta', 'enable' ) && $connections->find( 'beta' )->is_enabled(), 'Enabling a connection reports it.' );
+update_option( Circuit_Breaker::OPTION, array( 'beta' => array( 'failures' => 5, 'open_until' => time() + 600 ) ), false );
+sw_mailgate_check( 'sw-mailgate:reset' === $sw_mailgate_action( 'beta', 'reset' ) && ! $breaker->is_failing( 'beta' ), 'The reset action closes the breaker of the selected connection.' );
+$connections->save( array( 'id' => 'gamma', 'label' => 'GAMMA', 'provider' => 'scripted', 'enabled' => false, 'from_email' => 'gamma@sender.example.test' ) );
+update_option( Circuit_Breaker::OPTION, array( 'gamma' => array( 'failures' => 1 ) ), false );
+sw_mailgate_check( 'sw-mailgate:deleted' === $sw_mailgate_action( 'gamma', 'delete' ) && null === $connections->find( 'gamma' ) && array() === get_option( Circuit_Breaker::OPTION ), 'Deleting a connection also forgets its health state.' );
+sw_mailgate_check( 'sw-mailgate:not_found' === $sw_mailgate_action( 'alpha', 'unknown' ) && 'sw-mailgate:not_found' === $sw_mailgate_action( 'gamma', 'reset' ) && array( 'alpha', 'beta' ) === $sw_mailgate_order(), 'Unknown actions and connections only report not_found.' );
+
+// Stored test results are validated before the shared notice template renders them.
+$sw_mailgate_results = 'sw_mailgate_result_' . get_current_user_id();
+$_GET                = array();
+set_transient( $sw_mailgate_results, array( 'title' => array( 'not a title' ), 'rows' => 'not rows' ), 60 );
+ob_start();
+$admin->render_connections();
+$html = ob_get_clean();
+sw_mailgate_check( ! str_contains( $html, 'swmg-results' ) && false === get_transient( $sw_mailgate_results ), 'Malformed stored results are discarded without rendering.' );
+set_transient( $sw_mailgate_results, array( 'title' => 'Fixture results', 'rows' => array( 'not a row', array( 'connection' => 'ALPHA', 'success' => true, 'class' => '', 'message' => '', 'duration' => '0.01 s', 'from' => '', 'debug' => array() ) ) ), 60 );
+ob_start();
+$admin->render_connections();
+$html = ob_get_clean();
+$results_html = (string) strstr( $html, 'swmg-results' );
+$results_html = substr( $results_html, 0, (int) strpos( $results_html, '</table>' ) );
+sw_mailgate_check( str_contains( $results_html, 'Fixture results' ) && str_contains( $results_html, '<td>1</td>' ) && str_contains( $results_html, 'ALPHA' ) && ! str_contains( $results_html, '<td>2</td>' ), 'Valid stored results render and non-array rows are skipped.' );
 Failover_Settings::save( array( 'breaker_threshold' => 0 ) );
 $scripted->behaviour = array( 'alpha' => 'transient', 'beta' => 'ok' );
 for ( $i = 0; $i < 4; ++$i ) {

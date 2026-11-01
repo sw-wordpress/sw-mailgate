@@ -3,6 +3,11 @@
  * Mail log list and filters.
  *
  * @package SWMailgate
+ *
+ * @var array{status: string, connection_id: string, date_from: string, date_to: string, s: string} $filters
+ * @var SWMailgate\Connections\Connection[] $connections
+ * @var SWMailgate\Admin\Log_Table $table
+ * @var string $export_url
  */
 
 defined( 'ABSPATH' ) || exit;

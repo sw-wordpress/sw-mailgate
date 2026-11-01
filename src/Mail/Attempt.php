@@ -15,9 +15,12 @@ use SWMailgate\Providers\Send_Result;
 final class Attempt {
 
 	/**
-	 * @param string       $group      Shared by all attempts for the same wp_mail() call, including queued retries.
-	 * @param list<string> $recipients
-	 * @param bool         $queued     The chain was exhausted and the message waits in the retry queue.
+	 * @param string                    $group      Shared by all attempts for the same wp_mail() call, including queued retries.
+	 * @param list<string>              $recipients
+	 * @param list<string>              $original_to
+	 * @param array<string, mixed>|null $payload
+	 * @param list<string>              $related_addresses
+	 * @param bool                      $queued     The chain was exhausted and the message waits in the retry queue.
 	 */
 	public function __construct(
 		public readonly string $group,

@@ -1,5 +1,6 @@
 # Projektregeln
 
+- PHPStan Level 8 ohne Baseline (`composer stan`, `phpstan.neon.dist`) prüft `src/`, `templates/`, `sw-mailgate.php` und `uninstall.php`; Konstanten-Bootstrap und Stubs liegen in `tests/phpstan/`.
 - Verfasse Dokumentation möglichst knapp und ohne Wiederholungen, um Tokens zu sparen. Beschränke sie auf nötige Entscheidungen, Sicherheitsdetails und Testhinweise; verlinke vorhandene Dokumentation statt Inhalte zu duplizieren.
 
 ## Tests und Coverage

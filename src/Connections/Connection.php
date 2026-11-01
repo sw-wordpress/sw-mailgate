@@ -129,7 +129,7 @@ final class Connection {
 		);
 	}
 
-	private function constant( string $key ): string|int|bool|null {
+	private function constant( string $key ): string|int|float|bool|null {
 		$name = $this->constant_name( $key );
 		if ( ! defined( $name ) ) {
 			return null;

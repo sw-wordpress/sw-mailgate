@@ -1,0 +1,22 @@
+# PHPStan level 8 for the plugin's own code. No baseline: fix errors instead of ignoring them.
+# compat/ is an unmodified upstream PHPMailer copy and is not analysed.
+parameters:
+	level: 8
+	phpVersion: 80200
+	tmpDir: .phpstan.cache
+	paths:
+		- src
+		- templates
+		- sw-mailgate.php
+		- uninstall.php
+	bootstrapFiles:
+		- tests/phpstan/bootstrap.php
+	stubFiles:
+		- tests/phpstan/phpmailer.stub
+	# Values that differ between installations/releases; never treat comparisons as always true/false.
+	dynamicConstantNames:
+		- SW_MAILGATE_VERSION
+		- SW_MAILGATE_MIN_PHP
+		- SW_MAILGATE_DIR
+		- SW_MAILGATE_URL
+		- SW_MAILGATE_FILE

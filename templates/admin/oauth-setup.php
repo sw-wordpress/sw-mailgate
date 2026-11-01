@@ -3,6 +3,8 @@
  * Provider setup guide, progressively enhanced into an accessible native dialog.
  *
  * @package SWMailgate
+ *
+ * @var SWMailgate\Providers\OAuth_Provider $provider Set by connection-edit.php.
  */
 
 defined( 'ABSPATH' ) || exit;
