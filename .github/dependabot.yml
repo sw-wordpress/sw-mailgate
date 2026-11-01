@@ -1,6 +1,6 @@
 version: 2
-# One PR per group: security fixes together, then routine updates per ecosystem.
-# Majors outside these groups still arrive individually, since they may need migration work.
+# Fewer, coherent PRs: security fixes per ecosystem, packages that must move together,
+# then routine updates. Runtime majors (shipped in the plugin) still arrive individually.
 updates:
   - package-ecosystem: composer
     directory: /
@@ -12,11 +12,10 @@ updates:
       composer-security:
         applies-to: security-updates
         patterns: ['*']
-      composer-dev-tools:
+      php-dev-tools:
         dependency-type: development
         update-types: [minor, patch]
 
-  # Development-only JavaScript test tooling (c8).
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -30,6 +29,9 @@ updates:
       npm-dev-tools:
         dependency-type: development
         update-types: [minor, patch, major]
+      npm-runtime:
+        dependency-type: production
+        update-types: [minor, patch]
 
   - package-ecosystem: github-actions
     directory: /
