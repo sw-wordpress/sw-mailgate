@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Determine repository name and version
         id: metadata
@@ -139,7 +139,7 @@ jobs:
           php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" default
 
       - name: Create release and attach ZIP
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ steps.metadata.outputs.version }}
           files: ${{ steps.metadata.outputs.zip }}
