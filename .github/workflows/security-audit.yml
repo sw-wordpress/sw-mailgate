@@ -50,7 +50,11 @@ jobs:
           composer audit --locked --no-interaction >> "$REPORT" 2>&1 || failed=1
           endsection
 
-          section 'npm, development tooling (high and above; nothing from npm is shipped)'
+          section 'npm (root), shipped dependencies (high and above)'
+          npm audit --omit=dev --audit-level=high >> "$REPORT" 2>&1 || failed=1
+          endsection
+
+          section 'npm (root), all dependencies including dev tooling (high and above)'
           npm audit --audit-level=high >> "$REPORT" 2>&1 || failed=1
           endsection
 
