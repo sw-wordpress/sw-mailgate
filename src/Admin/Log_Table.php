@@ -72,6 +72,9 @@ final class Log_Table extends \WP_List_Table {
 	public function column_status( $item ): string {
 		return esc_html(
 			match ( $item['status'] ) {
+			'delivered' => __( 'Delivered', 'sw-mailgate' ),
+			'bounced' => __( 'Bounced', 'sw-mailgate' ),
+			'complained' => __( 'Complained', 'sw-mailgate' ),
 			'sent'       => __( 'Sent', 'sw-mailgate' ),
 			'redirected' => __( 'Redirected', 'sw-mailgate' ),
 			'partial'    => __( 'Partial delivery', 'sw-mailgate' ),

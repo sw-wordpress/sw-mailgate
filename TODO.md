@@ -110,25 +110,28 @@ requires the site's own registered OAuth clients.
 
 ## M7 – Webhook tracking (0.7.0)
 
-- [ ] `Webhook_Capable` interface (`register_webhook()`, `verify_request()`, `parse_events()`)
-- [ ] REST route `sw-mailgate/v1/webhook/{connection}`
-- [ ] Mailgun: HMAC-SHA256 signature, ±5 min timestamp window, replay protection, `hash_equals`
-- [ ] Table `{prefix}sw_mailgate_events`; update log status (delivered / bounced / complained) via provider message ID
-- [ ] UI: copy webhook URL, "create webhooks at Mailgun" via API; hidden for providers without webhooks
-- [ ] Bounce rate in the dashboard widget and statistics
+- [x] `Webhook_Capable` interface (`register_webhook()`, `verify_request()`, `parse_events()`)
+- [x] REST route `sw-mailgate/v1/webhook/{connection}`
+- [x] Mailgun: HMAC-SHA256 signature, ±5 min timestamp window, replay protection, `hash_equals`
+- [x] Table `{prefix}sw_mailgate_events`; update log status (delivered / bounced / complained) via provider message ID
+- [x] UI: copy webhook URL, "create webhooks at Mailgun" via API; hidden for providers without webhooks
+- [x] Bounce rate in the dashboard widget and statistics
 
 ## M8 – DNS checks (0.8.0)
 
-- [ ] `Dns_Checker` per sender domain:
+- [x] `Dns_Checker` per sender domain:
   - SPF: present and unique, provider include, max. 10 lookups, warning on `+all` / `?all`
   - DKIM: selector per provider or manual, TXT or CNAME
   - DMARC: present, policy, `rua`
   - Alignment of the From domain with the DKIM domain / Return-Path (important for fallback senders)
   - optional: MX, PTR of the SMTP host
-- [ ] `dns_requirements()` per provider; Mailgun reads the expected records from its API
-- [ ] DNS-over-HTTPS fallback (opt-in, it sends domains to a third party)
-- [ ] DNS page with traffic-light status, expected record and recommendation; result cache (transient)
-- [ ] Weekly cron, Site Health test, notice when results get worse
+- [x] `dns_requirements()` per provider; Mailgun reads the expected records from its API
+- [x] DNS-over-HTTPS fallback (opt-in, it sends domains to a third party)
+- [x] DNS page with traffic-light status, expected record and recommendation; result cache (transient)
+- [x] Weekly cron, Site Health test, notice when results get worse
+
+M7/M8 notes: setup, privacy, message-level bounce aggregation and DNS diagnostic
+limits are documented in `README.md`; deterministic scenarios are in `tests/README.md`.
 
 ## M9 – 1.0 release
 

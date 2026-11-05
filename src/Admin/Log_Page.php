@@ -63,7 +63,7 @@ final class Log_Page {
 			$filters[ $key ] = isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
 		}
 		// phpcs:enable
-		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected', 'partial', 'uncertain', 'queued' ), true ) ) {
+		if ( ! in_array( $filters['status'], array( 'sent', 'failed', 'redirected', 'partial', 'uncertain', 'queued', 'delivered', 'bounced', 'complained' ), true ) ) {
 			$filters['status'] = '';
 		}
 		return $filters;
@@ -273,12 +273,17 @@ final class Log_Page {
 		$this->authorize();
 		echo '<p>' . esc_html__( 'Final outcomes per message. Only retained log entries are counted.', 'sw-mailgate' ) . '</p>';
 		foreach ( array( 7, 30 ) as $days ) {
-			$totals = $this->logs->totals( $days );
+			$totals   = $this->logs->totals( $days );
+			$tracking = $this->logs->tracking_totals( $days );
 			printf(
 				'<p>%s</p>',
 				/* translators: 1: days, 2: sent messages, 3: failed messages */
-				esc_html( sprintf( __( 'Last %1$d days: %2$d sent, %3$d failed.', 'sw-mailgate' ), $days, $totals['sent'], $totals['failed'] ) )
+				esc_html( sprintf( __( 'Last %1$d days: %2$d sent, %3$d failed.', 'sw-mailgate' ), $days, $tracking['accepted'], $totals['failed'] ) )
 			);
+			$accepted = $tracking['accepted'];
+			$rate     = $accepted > 0 ? 100 * $tracking['bounced'] / $accepted : 0;
+			/* translators: 1: delivered count, 2: bounced count, 3: complaint count, 4: message bounce percentage */
+			echo '<p>' . esc_html( sprintf( __( '%1$d delivered, %2$d bounced, %3$d complained. Message bounce rate: %4$s%% of accepted messages (tracking may be incomplete).', 'sw-mailgate' ), $totals['delivered'] ?? 0, $tracking['bounced'], $totals['complained'] ?? 0, number_format_i18n( $rate, 1 ) ) ) . '</p>';
 			if ( ! empty( $totals['partial'] ) || ! empty( $totals['uncertain'] ) ) {
 				/* translators: 1: partially delivered messages, 2: messages with uncertain delivery */
 				echo '<p>' . esc_html( sprintf( __( '%1$d partial deliveries, %2$d uncertain deliveries. Check outcomes before retrying.', 'sw-mailgate' ), $totals['partial'] ?? 0, $totals['uncertain'] ?? 0 ) ) . '</p>';

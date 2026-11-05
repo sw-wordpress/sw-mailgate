@@ -16,7 +16,8 @@ use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\Mail\Mailer_Factory;
 
-final class Smtp_Provider implements Provider {
+final class Smtp_Provider implements Provider, Dns_Capable {
+	use Default_Dns_Requirements;
 
 	/** Keep the transcript short; it is shown in the admin and may end up in the log. */
 	private const MAX_DEBUG_LINES = 60;

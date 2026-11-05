@@ -46,13 +46,14 @@ function helpBlock(label) {
 }
 
 /** Load admin.js into fresh globals and fire DOMContentLoaded. */
-function load(blocks, { dialogSupported = true } = {}) {
+function load(blocks, { dialogSupported = true, copyButtons = [] } = {}) {
 	const documentListeners = {};
 	const body = new FakeElement('body');
 	global.document = {
 		body,
 		addEventListener(type, listener) { (documentListeners[type] ||= []).push(listener); },
 		querySelectorAll(selector) {
+			if (selector === '[data-swmg-copy]') { return copyButtons; }
 			assert.equal(selector, '.swmg-oauth-help');
 			return blocks.map((block) => block.details);
 		},
@@ -118,4 +119,51 @@ test('keeps the inline guide when the browser lacks <dialog> support', () => {
 
 test('does nothing on pages without setup guides', () => {
 	assert.equal(load([]).children.length, 0);
+});
+
+function copyButton() {
+	const button = new FakeElement('button');
+	const input = new FakeElement('input');
+	input.value = 'https://example.test/wp-json/sw-mailgate/v1/webhook/mailgun';
+	input.select = function () { this.selected = true; };
+	button.previousElementSibling = input;
+	button.dataset.copiedLabel = 'Copied';
+	return { button, input };
+}
+
+test('copy URL uses the clipboard and provides translated feedback', async () => {
+	const { button, input } = copyButton();
+	let copied;
+	Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText(value) { copied = value; return Promise.resolve(); } } } });
+	load([], { copyButtons: [button] });
+	button.dispatch('click');
+	await Promise.resolve();
+	assert.equal(copied, input.value);
+	assert.equal(button.textContent, 'Copied');
+	assert.ok(input.selected && input.focused);
+	delete globalThis.navigator;
+});
+
+test('copy URL keeps text selected if clipboard permission is denied', async () => {
+	const { button, input } = copyButton();
+	Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText() { return Promise.reject(new Error('denied')); } } } });
+	load([], { copyButtons: [button] });
+	button.dispatch('click');
+	await Promise.resolve();
+	await Promise.resolve();
+	assert.ok(input.selected);
+	assert.equal(button.textContent, '');
+	delete globalThis.navigator;
+});
+
+test('copy URL supports manual copying without a clipboard API', () => {
+	const { button, input } = copyButton();
+	delete globalThis.navigator;
+	load([], { copyButtons: [button] });
+	button.dispatch('click');
+	assert.ok(input.selected && input.focused);
+	globalThis.navigator = {};
+	button.dispatch('click');
+	assert.ok(input.selected);
+	delete globalThis.navigator;
 });

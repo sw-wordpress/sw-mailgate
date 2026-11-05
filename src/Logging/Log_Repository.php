@@ -23,7 +23,10 @@ final class Log_Repository {
 	 */
 	public function insert( array $row ): void {
 		global $wpdb;
-		$wpdb->insert( self::table(), $row );
+		if ( false !== $wpdb->insert( self::table(), $row ) ) {
+			$hash = $row['provider_message_hash'] ?? self::message_hash( (string) ( $row['provider_message_id'] ?? '' ) );
+			( new \SWMailgate\Tracking\Event_Repository() )->reconcile( $row['connection_id'], $row['provider'], $hash, (string) ( $row['provider_message_id'] ?? '' ) );
+		}
 	}
 
 	/**
@@ -132,11 +135,34 @@ final class Log_Repository {
 		return $totals;
 	}
 
+	/** @return array{accepted: int, bounced: int} */
+	public function tracking_totals( int $days ): array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS accepted, COALESCE(SUM(l.status = 'bounced' OR EXISTS (SELECT 1 FROM %i e WHERE e.log_id = l.id AND e.status = 'bounced')), 0) AS bounced FROM %i l INNER JOIN (SELECT MAX(id) AS id FROM %i WHERE created_at >= %s GROUP BY attempt_group) latest ON l.id = latest.id WHERE l.status IN ('sent', 'redirected', 'delivered', 'bounced', 'complained')",
+				\SWMailgate\Tracking\Event_Repository::table(),
+				self::table(),
+				self::table(),
+				gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS )
+			),
+			ARRAY_A
+		);
+		return array(
+			'accepted' => (int) ( $row['accepted'] ?? 0 ),
+			'bounced'  => (int) ( $row['bounced'] ?? 0 ),
+		);
+	}
+
 	public function retain(): void {
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare( 'DELETE FROM %i WHERE created_at < %s', self::table(), gmdate( 'Y-m-d H:i:s', time() - (int) Settings::get()['retention'] * DAY_IN_SECONDS ) )
 		);
+	}
+
+	public static function message_hash( string $id ): string {
+		return '' === $id ? '' : hash_hmac( 'sha256', trim( $id, '<>' ), wp_salt( 'auth' ) );
 	}
 
 	/** HMACs keep privacy requests possible even when addresses are masked. */
@@ -157,6 +183,9 @@ final class Log_Repository {
 
 	public function delete( int $id ): bool {
 		global $wpdb;
+		if ( false === $wpdb->delete( \SWMailgate\Tracking\Event_Repository::table(), array( 'log_id' => $id ), array( '%d' ) ) ) {
+			return false;
+		}
 		return false !== $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
 	}
 }

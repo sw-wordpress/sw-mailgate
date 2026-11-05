@@ -41,6 +41,17 @@ final class Field {
 		return new self( $key, $label, self::PASSWORD, true, '', array(), $description, $required );
 	}
 
+	/** @return list<self> */
+	public static function dns_fields(): array {
+		return array(
+			new self( 'dns_dkim_selector', __( 'DNS: DKIM selector', 'sw-mailgate' ), description: __( 'Active selector from your provider (e.g. google or selector1). Mailgun expected records are retrieved automatically.', 'sw-mailgate' ) ),
+			new self( 'dns_dkim_domain', __( 'DNS: DKIM signing domain', 'sw-mailgate' ), description: __( 'Actual DKIM d= domain; empty uses the provider default. Verify in a received mail.', 'sw-mailgate' ) ),
+			new self( 'dns_return_path', __( 'DNS: Return-Path domain', 'sw-mailgate' ), description: __( 'Actual envelope sender domain from a received test mail.', 'sw-mailgate' ) ),
+			new self( 'dns_spf_include', __( 'DNS: provider SPF include', 'sw-mailgate' ), description: __( 'For generic SMTP, enter the include domain supplied by your provider.', 'sw-mailgate' ) ),
+			new self( 'dns_optional', __( 'DNS: optional MX and SMTP PTR checks', 'sw-mailgate' ), self::CHECKBOX ),
+		);
+	}
+
 	public function is_checked( string $value ): bool {
 		return null !== $this->false_values
 			? ! in_array( $value, $this->false_values, true )

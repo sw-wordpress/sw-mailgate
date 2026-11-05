@@ -24,7 +24,7 @@ final class Mailer_Factory {
 			'PHPMailer\\PHPMailer\\PHPMailer' => '/PHPMailer/PHPMailer.php',
 			'PHPMailer\\PHPMailer\\SMTP'      => '/PHPMailer/SMTP.php',
 			'PHPMailer\\PHPMailer\\Exception' => '/PHPMailer/Exception.php',
-			'WP_PHPMailer'                   => '/class-wp-phpmailer.php',
+			'WP_PHPMailer'                    => '/class-wp-phpmailer.php',
 		) as $class => $file ) {
 			if ( ! class_exists( $class, false ) ) {
 				require_once ABSPATH . WPINC . $file;
