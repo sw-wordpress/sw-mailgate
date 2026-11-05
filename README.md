@@ -47,9 +47,12 @@ webhooks at Mailgun**. API registration needs domain-webhook permissions and
 preserves existing endpoints; conflicting integrations must be extended manually.
 Enable logging with `SW_MAILGATE_LOG_ENABLED` to retain delivery events. Requests
 outside ±5 minutes are rejected; duplicate tokens/events have no further effects.
-Early events without a matching log request a retry. With logging off, only opaque
-replay claims are kept. Events retain log references/statuses, never webhook bodies
-or recipients, and follow log retention/privacy deletion. Existing masked logs from
+Early events are acknowledged and retained with an opaque message-ID hash, then
+correlated when the log is inserted; hourly reconciliation recovers failed updates.
+Mailgun does not retry delivery notifications. Unmatched events and replay claims
+are eligible for daily cleanup after 24 hours. With logging off, only opaque replay
+claims are kept. Linked events follow log retention/privacy deletion; webhook bodies,
+raw message IDs and recipients are never retained. Existing masked logs from
 before 0.8.0 cannot be correlated retroactively.
 
 For multiple recipients, any complaint outranks a bounce, which outranks delivery.

@@ -22,8 +22,8 @@ use SWMailgate\Routing\Retry_Queue;
 final class Installer {
 
 	/** Bump when the schema or stored data changes; upgrade() runs once per change. */
-	// Version 5 adds minimal webhook events and atomic replay claims.
-	public const DB_VERSION = 5;
+	// Version 6 retains opaque correlation metadata for events that precede their logs.
+	public const DB_VERSION = 6;
 
 	private const VERSION_OPTION = 'sw_mailgate_db_version';
 
@@ -99,11 +99,14 @@ final class Installer {
 		token_hash varchar(64) NOT NULL,
 		created_at datetime NOT NULL,
 		connection_id varchar(191) NOT NULL,
+		provider varchar(64) NOT NULL DEFAULT '',
+		provider_message_hash varchar(64) NOT NULL DEFAULT '',
 		log_id bigint(20) unsigned NOT NULL DEFAULT 0,
 		status varchar(20) NOT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY token_hash (token_hash),
 		KEY log_id (log_id),
+		KEY pending_message (connection_id,provider_message_hash,log_id),
 		KEY created_at (created_at)
 		) ENGINE=InnoDB $collate;"
 		);
@@ -126,6 +129,7 @@ final class Installer {
 		wp_clear_scheduled_hook( Logger::CRON_HOOK );
 		wp_clear_scheduled_hook( Retry_Queue::CRON_HOOK );
 		wp_clear_scheduled_hook( \SWMailgate\Dns\Dns_Monitor::CRON_HOOK );
+		wp_clear_scheduled_hook( \SWMailgate\Tracking\Event_Repository::CRON_HOOK );
 	}
 
 	public static function uninstall(): void {

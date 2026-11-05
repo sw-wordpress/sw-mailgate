@@ -23,7 +23,10 @@ final class Log_Repository {
 	 */
 	public function insert( array $row ): void {
 		global $wpdb;
-		$wpdb->insert( self::table(), $row );
+		if ( false !== $wpdb->insert( self::table(), $row ) ) {
+			$hash = $row['provider_message_hash'] ?? self::message_hash( (string) ( $row['provider_message_id'] ?? '' ) );
+			( new \SWMailgate\Tracking\Event_Repository() )->reconcile( $row['connection_id'], $row['provider'], $hash, (string) ( $row['provider_message_id'] ?? '' ) );
+		}
 	}
 
 	/**

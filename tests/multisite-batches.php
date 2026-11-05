@@ -47,7 +47,7 @@ function restore_current_blog(): void {
 function get_option( string $key, mixed $default = false ): mixed { return $GLOBALS['sw_mailgate_options'][ $GLOBALS['sw_mailgate_site'] ][ $key ] ?? $default; }
 function delete_option( string $key ): void { unset( $GLOBALS['sw_mailgate_options'][ $GLOBALS['sw_mailgate_site'] ][ $key ] ); }
 function wp_clear_scheduled_hook( string $hook ): void {
-	if ( ! in_array( $hook, array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue', 'sw_mailgate_dns_weekly' ), true ) ) { throw new RuntimeException( 'Unexpected cron hook.' ); }
+	if ( ! in_array( $hook, array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue', 'sw_mailgate_dns_weekly', 'sw_mailgate_reconcile_events' ), true ) ) { throw new RuntimeException( 'Unexpected cron hook.' ); }
 	$GLOBALS['sw_mailgate_cleared'][ $hook ][] = $GLOBALS['sw_mailgate_site'];
 }
 function delete_transient( string $key ): void {

@@ -93,7 +93,7 @@ $wpdb = new class() {
 require $sw_mailgate_test_root . '/uninstall.php';
 
 $sw_mailgate_test_tables = 'delete' === $sw_mailgate_test_mode ? array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue', 'wp_sw_mailgate_events' ) : array();
-if ( $wpdb->dropped !== $sw_mailgate_test_tables || array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue', 'sw_mailgate_dns_weekly' ) !== $sw_mailgate_test_cleared_hooks ) {
+if ( $wpdb->dropped !== $sw_mailgate_test_tables || array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue', 'sw_mailgate_dns_weekly', 'sw_mailgate_reconcile_events' ) !== $sw_mailgate_test_cleared_hooks ) {
 	throw new RuntimeException( 'Uninstall did not handle the tables and cron events correctly.' );
 }
 

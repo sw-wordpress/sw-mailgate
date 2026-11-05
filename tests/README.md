@@ -8,9 +8,10 @@ M7/M8 scenarios (same disposable WordPress/database configuration as below):
 
 Included in the full runner. REST/HTTP/DNS fixtures cover signatures, timestamp
 windows, replay/event deduplication, out-of-order/early events, connection isolation,
-masked-ID correlation, transactional rollback/retry, disabled logging, privacy,
+masked-ID correlation without provider redelivery, hourly recovery, caller transaction
+rollback, v5 schema migration, disabled logging, privacy,
 retention, registration permissions, bounce statistics and provider-specific UI.
-DNS covers SPF recursion/limits, selectors/CNAMEs, DMARC, configured alignment,
+DNS covers SPF recursion/limits and all/redirect ordering, selectors/CNAMEs, DMARC, configured alignment,
 MX/PTR, native/DoH errors and explicit consent, cache identity, weekly deterioration,
 Site Health and authorization. No live provider account or public DNS is used.
 JavaScript tests cover webhook copying with and without clipboard access.

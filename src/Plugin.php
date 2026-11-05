@@ -59,6 +59,8 @@ final class Plugin {
 		$webhooks         = new \SWMailgate\Tracking\Webhook_Controller( $connections, $providers );
 		add_action( 'rest_api_init', array( $webhooks, 'register' ) );
 		( new \SWMailgate\Dns\Dns_Monitor( $connections, $providers ) )->register();
+		add_action( 'init', array( \SWMailgate\Tracking\Event_Repository::class, 'schedule' ) );
+		add_action( \SWMailgate\Tracking\Event_Repository::CRON_HOOK, array( new \SWMailgate\Tracking\Event_Repository(), 'reconcile_pending' ) );
 		add_action( Logger::CRON_HOOK, array( \SWMailgate\Tracking\Event_Repository::class, 'retain' ), 20 );
 		$logs = new Log_Repository();
 		( new Logger( $logs ) )->register();

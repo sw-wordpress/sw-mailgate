@@ -141,11 +141,15 @@ final class Dns_Checker {
 			return false;
 		}
 		$seen[ $domain ] = true;
+		$has_all         = 1 === preg_match( '/(?:^|\s)[+?~-]?all(?:\s|$)/i', $record );
 		foreach ( preg_split( '/\s+/', $record ) ?: array() as $term ) {
 			$positive = ! in_array( substr( $term, 0, 1 ), array( '-', '~', '?' ), true );
 			$term     = strtolower( ltrim( $term, '+-~?' ) );
 			if ( 'all' === $term ) {
 				break; // SPF ignores mechanisms after all.
+			}
+			if ( $has_all && str_starts_with( $term, 'redirect=' ) ) {
+				continue; // RFC 7208: all suppresses redirect regardless of its position.
 			}
 			if ( preg_match( '/^(include:|redirect=)(.+)$/', $term, $match ) ) {
 				if ( ++$count > 10 ) {
@@ -160,7 +164,7 @@ final class Dns_Checker {
 				}
 			} elseif ( preg_match( '/^(?:a|mx|ptr)(?:[:\/]|$)|^exists:/', $term ) && ++$count > 10 ) {
 				return false;
-			} elseif ( ! preg_match( '/^(?:v=spf1|all|ip4:[0-9.]+(?:\/[0-9]+)?|ip6:[a-f0-9:]+(?:\/[0-9]+)?|[a-z][a-z0-9_.-]*=.+)$/iD', $term ) && ! preg_match( '/^(?:a|mx|ptr)(?:[:\/]|$)|^exists:/', $term ) ) {
+			} elseif ( ! preg_match( '/^(?:ip4:[0-9.]+(?:\/[0-9]+)?|ip6:[a-f0-9:]+(?:\/[0-9]+)?|[a-z][a-z0-9_.-]*=.+)$/iD', $term ) && ! preg_match( '/^(?:a|mx|ptr)(?:[:\/]|$)|^exists:/', $term ) ) {
 				return false;
 			}
 		}

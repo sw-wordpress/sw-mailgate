@@ -63,6 +63,13 @@ foreach ( array( array(), array( 'v=spf1 -all', 'v=spf1 include:_spf.google.com 
 	$resolver->records = $base; $resolver->records['example.test']['TXT'] = $spf;
 	sw_mailgate_check( 'error' === $status( $checker->check( $create(), $google ), 'SPF' ), 'Missing, duplicate, permissive, unauthorized or invalid SPF is not green.' );
 }
+foreach ( array( 'v=spf1 redirect=_spf.google.com -all', 'v=spf1 -all redirect=_spf.google.com', 'v=spf1 ReDiReCt=_spf.google.com ~AlL' ) as $record ) {
+	$resolver->records = $base; $resolver->records['example.test']['TXT'] = array( $record ); $resolver->queries = array();
+	sw_mailgate_check( 'error' === $status( $checker->check( $create(), $google ), 'SPF' ), 'An all mechanism suppresses redirect in every term order.' );
+	sw_mailgate_check( ! in_array( array( '_spf.google.com', 'TXT', false ), $resolver->queries, true ), 'An ignored SPF redirect neither authorizes the provider nor consumes DNS lookups.' );
+}
+$resolver->records = $base; $resolver->records['example.test']['TXT'] = array( 'v=spf1 redirect=_spf.google.com' );
+sw_mailgate_check( 'good' === $status( $checker->check( $create(), $google ), 'SPF' ), 'SPF redirect without all still authorizes the provider.' );
 $resolver->records = $base;
 $resolver->records['_spf.google.com']['TXT'] = array( 'v=spf1 include:example.test -all' );
 sw_mailgate_check( 'error' === $status( $checker->check( $create(), $google ), 'SPF' ) && count( $resolver->queries ) < 300, 'SPF include loops terminate and fail.' );
