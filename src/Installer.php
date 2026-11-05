@@ -22,8 +22,8 @@ use SWMailgate\Routing\Retry_Queue;
 final class Installer {
 
 	/** Bump when the schema or stored data changes; upgrade() runs once per change. */
-	// Version 4 also migrates the small version marker into WordPress's autoload cache.
-	public const DB_VERSION = 4;
+	// Version 5 adds minimal webhook events and atomic replay claims.
+	public const DB_VERSION = 5;
 
 	private const VERSION_OPTION = 'sw_mailgate_db_version';
 
@@ -62,6 +62,7 @@ final class Installer {
 			error_message text NOT NULL,
 			duration decimal(12,6) NOT NULL DEFAULT 0,
 			provider_message_id text NOT NULL,
+			provider_message_hash varchar(64) NOT NULL DEFAULT '',
 			caller varchar(255) NOT NULL,
 			address_hashes longtext NOT NULL,
 			payload longtext NULL,
@@ -69,7 +70,8 @@ final class Installer {
 			KEY created_at (created_at),
 			KEY attempt_group (attempt_group),
 			KEY status_created (status,created_at),
-			KEY connection_id (connection_id)
+			KEY connection_id (connection_id),
+			KEY provider_message_hash (provider_message_hash)
 			) $collate;"
 		);
 		$queue = Retry_Queue::table();
@@ -90,7 +92,22 @@ final class Installer {
 			KEY next_run_at (next_run_at)
 			) $collate;"
 		);
-		foreach ( array( $table, $queue ) as $name ) {
+		$events = \SWMailgate\Tracking\Event_Repository::table();
+		dbDelta(
+			"CREATE TABLE $events (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		token_hash varchar(64) NOT NULL,
+		created_at datetime NOT NULL,
+		connection_id varchar(191) NOT NULL,
+		log_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		status varchar(20) NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY token_hash (token_hash),
+		KEY log_id (log_id),
+		KEY created_at (created_at)
+		) ENGINE=InnoDB $collate;"
+		);
+		foreach ( array( $table, $queue, $events ) as $name ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Verify the schema exists before marking the migration complete.
 			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $name ) ) ) !== $name ) {
 				return;
@@ -108,6 +125,7 @@ final class Installer {
 	public static function deactivate(): void {
 		wp_clear_scheduled_hook( Logger::CRON_HOOK );
 		wp_clear_scheduled_hook( Retry_Queue::CRON_HOOK );
+		wp_clear_scheduled_hook( \SWMailgate\Dns\Dns_Monitor::CRON_HOOK );
 	}
 
 	public static function uninstall(): void {
@@ -158,7 +176,10 @@ final class Installer {
 		delete_option( Redirection_Settings::OPTION );
 		delete_option( Failover_Settings::OPTION );
 		delete_option( Circuit_Breaker::OPTION );
-		foreach ( array( Log_Repository::table(), Retry_Queue::table() ) as $table ) {
+		delete_option( \SWMailgate\Dns\Dns_Monitor::OPTION );
+		delete_option( \SWMailgate\Dns\Dns_Monitor::STATE );
+		delete_transient( \SWMailgate\Dns\Dns_Monitor::CACHE );
+		foreach ( array( Log_Repository::table(), Retry_Queue::table(), \SWMailgate\Tracking\Event_Repository::table() ) as $table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Remove the owned tables only after the user enabled data deletion.
 			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		}

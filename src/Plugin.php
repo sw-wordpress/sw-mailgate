@@ -56,7 +56,11 @@ final class Plugin {
 		$queue            = new Retry_Queue( $secrets );
 		$this->dispatcher = new Dispatcher( $connections, $providers, $breaker, $queue );
 		$this->redirector = new Redirector();
-		$logs             = new Log_Repository();
+		$webhooks         = new \SWMailgate\Tracking\Webhook_Controller( $connections, $providers );
+		add_action( 'rest_api_init', array( $webhooks, 'register' ) );
+		( new \SWMailgate\Dns\Dns_Monitor( $connections, $providers ) )->register();
+		add_action( Logger::CRON_HOOK, array( \SWMailgate\Tracking\Event_Repository::class, 'retain' ), 20 );
+		$logs = new Log_Repository();
 		( new Logger( $logs ) )->register();
 		( new Privacy( $logs, $queue ) )->register();
 		add_action( 'init', array( Logger::class, 'schedule' ) );
@@ -70,6 +74,7 @@ final class Plugin {
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
+			( new \SWMailgate\Admin\Webhook_Admin( $connections, $providers ) )->register();
 			( new OAuth_Admin( $connections ) )->register();
 			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector, $breaker ) )->register();
 			( new Log_Page( $logs, $connections, $queue, $this->dispatcher ) )->register();

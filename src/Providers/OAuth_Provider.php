@@ -15,7 +15,8 @@ use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\OAuth\OAuth_Client;
 
-abstract class OAuth_Provider implements Provider {
+abstract class OAuth_Provider implements Provider, Dns_Capable {
+	use Default_Dns_Requirements;
 
 	public function __construct(
 		protected readonly Http_Client $http = new Http_Client(),

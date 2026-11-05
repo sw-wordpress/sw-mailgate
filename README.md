@@ -21,6 +21,8 @@ redirection show and control where mail goes.
 - **Staging redirection** — Sends all mail to one test inbox, with an allowlist for addresses or domains.
 - **Optional delivery log** — Off by default; with address masking, retention, CSV export and resend.
 - **Retry queue** — Keeps mail that no connection could send and retries it later (opt-in).
+- **Mailgun webhooks** — Signed delivery, bounce and complaint tracking with replay protection.
+- **Sender DNS checks** — SPF, DKIM, DMARC, configured alignment and optional MX/PTR; weekly monitoring and Site Health.
 - **Encrypted credentials** — Passwords, API keys and tokens are stored encrypted with [libsodium](https://en.wikipedia.org/wiki/Libsodium).
 
 ## Languages
@@ -36,6 +38,40 @@ English.
 5. On staging sites, enter a test inbox under **Mailgate → Settings → Redirect mail to** and click **Save Changes**.
 
 ## Configuration
+
+### Mailgun tracking
+
+Save the connection's **HTTP webhook signing key** from Mailgun → API Security
+(separate from its API key), then copy its HTTPS webhook URL or click **Create
+webhooks at Mailgun**. API registration needs domain-webhook permissions and
+preserves existing endpoints; conflicting integrations must be extended manually.
+Enable logging with `SW_MAILGATE_LOG_ENABLED` to retain delivery events. Requests
+outside ±5 minutes are rejected; duplicate tokens/events have no further effects.
+Early events without a matching log request a retry. With logging off, only opaque
+replay claims are kept. Events retain log references/statuses, never webhook bodies
+or recipients, and follow log retention/privacy deletion. Existing masked logs from
+before 0.8.0 cannot be correlated retroactively.
+
+For multiple recipients, any complaint outranks a bounce, which outranks delivery.
+The dashboard's message bounce rate counts each bounced message once among retained
+final accepted messages, even if it later receives a complaint. Tracking can be
+incomplete; it is not a per-recipient delivery rate. See
+[Mailgun signature requirements](https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/securing-webhooks).
+
+### DNS diagnostics
+
+Open **Mailgate → DNS checks**. Results are cached for one hour; **Save and check
+again** refreshes them. A weekly cron records deterioration and Site Health links
+to the results. Mailgun expected sending records come from its domain API; other
+providers supply known SPF includes. Configure active DKIM selectors, actual DKIM
+`d=` and Return-Path domains in each connection's DNS fields, especially for fallback
+senders. Generic SMTP can also specify its provider SPF include and optional
+IPv4 SMTP-host PTR/MX checks.
+
+Local DNS is used by default. The page's explicit opt-in allows a Cloudflare
+DNS-over-HTTPS fallback on resolver failure and discloses queried domains to that
+service. DNS results are guidance: inherited DMARC policy, SPF macros, organizational
+domain alignment and actual signatures need manual review using received test mails.
 
 ### Requirements
 

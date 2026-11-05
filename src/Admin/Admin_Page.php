@@ -216,7 +216,7 @@ final class Admin_Page {
 
 		$settings = array();
 		$secrets  = array();
-		foreach ( $provider->fields() as $field ) {
+		foreach ( array_merge( $provider->fields(), Field::dns_fields() ) as $field ) {
 			// Locked inputs are disabled and not posted; keep the stored value for when the constant is removed.
 			if ( null !== $existing && $existing->is_locked( $field->key ) ) {
 				if ( ! $field->secret && array_key_exists( $field->key, $existing->settings() ) ) {

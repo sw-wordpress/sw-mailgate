@@ -109,7 +109,7 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 
 		<h2><?php echo esc_html( $provider->label() ); ?></h2>
 		<table class="form-table" role="presentation">
-			<?php foreach ( $provider->fields() as $field ) : ?>
+			<?php foreach ( array_merge( $provider->fields(), Field::dns_fields() ) as $field ) : ?>
 				<?php
 				$input_id = 'swmg-field-' . $field->key;
 				$hint     = $locked_hint( $connection, $field->key );
@@ -190,6 +190,19 @@ $locked_hint = static function ( ?Connection $connection, string $key ): string 
 			<input type="hidden" name="connection" value="<?php echo esc_attr( $connection->id() ); ?>">
 			<?php submit_button( __( 'Test connection (no mail is sent)', 'sw-mailgate' ), 'secondary', 'submit', false ); ?>
 			<a class="button" href="<?php echo esc_url( Admin_Page::url( array( 'connection' => $connection->id() ), Admin_Page::TEST_SLUG ) ); ?>"><?php esc_html_e( 'Send test mail', 'sw-mailgate' ); ?></a>
+		</form>
+	<?php endif; ?>
+
+	<?php if ( null !== $connection && $provider instanceof \SWMailgate\Providers\Webhook_Capable ) : ?>
+		<h2><?php esc_html_e( 'Delivery webhooks', 'sw-mailgate' ); ?></h2>
+		<p><label for="swmg-webhook-url"><?php esc_html_e( 'Copy webhook URL', 'sw-mailgate' ); ?></label><br>
+		<input id="swmg-webhook-url" class="large-text code" readonly value="<?php echo esc_attr( \SWMailgate\Tracking\Webhook_Controller::url( $connection->id() ) ); ?>">
+		<button type="button" class="button" data-swmg-copy data-copied-label="<?php esc_attr_e( 'Copied', 'sw-mailgate' ); ?>"><?php esc_html_e( 'Copy URL', 'sw-mailgate' ); ?></button></p>
+		<p><?php esc_html_e( 'Save the HTTP webhook signing key first. Register delivered, permanent_fail and complained at Mailgun. Tracking requires logging enabled in wp-config.php. For several recipients, any bounce/complaint takes precedence over delivery.', 'sw-mailgate' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=sw-mailgate-webhooks' ) ); ?>">
+			<?php wp_nonce_field( 'sw_mailgate_webhooks' ); ?>
+			<input type="hidden" name="connection" value="<?php echo esc_attr( $connection->id() ); ?>">
+			<?php submit_button( __( 'Create webhooks at Mailgun', 'sw-mailgate' ), 'secondary' ); ?>
 		</form>
 	<?php endif; ?>
 </div>

@@ -24,6 +24,15 @@ defined( 'ABSPATH' ) || exit;
 			<option value="redirected" <?php selected( $filters['status'], 'redirected' ); ?>><?php esc_html_e( 'Redirected', 'sw-mailgate' ); ?></option>
 			<option value="partial" <?php selected( $filters['status'], 'partial' ); ?>><?php esc_html_e( 'Partial delivery', 'sw-mailgate' ); ?></option>
 			<option value="uncertain" <?php selected( $filters['status'], 'uncertain' ); ?>><?php esc_html_e( 'Delivery uncertain', 'sw-mailgate' ); ?></option>
+			<?php
+			foreach ( array(
+				'delivered'  => __( 'Delivered', 'sw-mailgate' ),
+				'bounced'    => __( 'Bounced', 'sw-mailgate' ),
+				'complained' => __( 'Complained', 'sw-mailgate' ),
+			) as $delivery_status => $label ) :
+				?>
+				<option value="<?php echo esc_attr( $delivery_status ); ?>" <?php selected( $filters['status'], $delivery_status ); ?>><?php echo esc_html( $label ); ?></option>
+			<?php endforeach; ?>
 			<option value="queued" <?php selected( $filters['status'], 'queued' ); ?>><?php esc_html_e( 'Queued for retry', 'sw-mailgate' ); ?></option>
 			<option value="failed" <?php selected( $filters['status'], 'failed' ); ?>><?php esc_html_e( 'Failed', 'sw-mailgate' ); ?></option>
 		</select>

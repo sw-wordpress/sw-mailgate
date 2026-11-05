@@ -212,6 +212,11 @@ $provider = new class() implements Provider {
 add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => array_merge( $providers, array( $provider ) ) );
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
+if ( in_array( $argv[2] ?? '', array( 'tracking', 'dns' ), true ) ) {
+	include __DIR__ . '/' . $argv[2] . '.php';
+	$sw_mailgate_test_complete = true;
+	exit;
+}
 if ( 'oauth' === ( $argv[2] ?? '' ) ) {
 	include __DIR__ . '/oauth.php';
 	$sw_mailgate_test_complete = true;

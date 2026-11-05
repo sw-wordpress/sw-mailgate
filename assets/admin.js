@@ -1,5 +1,17 @@
 /* Progressive enhancement: the complete setup guide remains readable without JavaScript. */
 document.addEventListener('DOMContentLoaded', function () {
+	document.querySelectorAll('[data-swmg-copy]').forEach(function (button) {
+		button.addEventListener('click', function () {
+			const input = button.previousElementSibling;
+			input.focus();
+			input.select();
+			if (typeof navigator !== 'undefined' && navigator.clipboard) {
+				navigator.clipboard.writeText(input.value).then(function () {
+					button.textContent = button.dataset.copiedLabel;
+				}).catch(function () { /* The selected URL remains available for manual copying. */ });
+			}
+		});
+	});
 	document.querySelectorAll('.swmg-oauth-help').forEach(function (details) {
 		if (typeof HTMLDialogElement === 'undefined') {
 			return;
