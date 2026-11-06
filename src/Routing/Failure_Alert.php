@@ -34,6 +34,9 @@ final class Failure_Alert {
 		add_action( 'sw_mailgate_queue_expired', array( $this, 'queue_expired' ) );
 	}
 
+	/**
+	 * @param array{failures: int, open_until: int, last_error: string} $state
+	 */
 	public function connection_down( Connection $connection, array $state ): void {
 		$this->add(
 			/* translators: 1: site name, 2: connection label */
@@ -58,6 +61,9 @@ final class Failure_Alert {
 		);
 	}
 
+	/**
+	 * @param array{subject: string, recipients: int, created_at: string, last_error: string} $summary
+	 */
 	public function queue_expired( array $summary ): void {
 		$this->add(
 			/* translators: %s: site name */

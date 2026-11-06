@@ -16,7 +16,8 @@ use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\Mail\Mailer_Factory;
 
-final class Smtp_Provider implements Provider {
+final class Smtp_Provider implements Provider, Dns_Capable {
+	use Default_Dns_Requirements;
 
 	/** Keep the transcript short; it is shown in the admin and may end up in the log. */
 	private const MAX_DEBUG_LINES = 60;
@@ -125,7 +126,11 @@ final class Smtp_Provider implements Provider {
 		}
 	}
 
-	/** Resolve delivery certainty before examining transient/connection errors. */
+	/**
+	 * Resolve delivery certainty before examining transient/connection errors.
+	 *
+	 * @param list<string> $debug
+	 */
 	private function delivery_failure( Mail_Catcher $mailer, Connection $connection, string $message, array $debug ): Send_Result {
 		$smtp = $mailer->getSMTPInstance();
 		if ( ! $smtp instanceof Tracked_SMTP ) {
@@ -159,11 +164,18 @@ final class Smtp_Provider implements Provider {
 	public function test_connection( Connection $connection ): Send_Result {
 		$mailer = Mailer_Factory::create();
 		$this->prepare( $mailer, $connection );
+		return $this->test_prepared_connection( $mailer, $connection );
+	}
+
+	/** Test a configured SMTP mailer, including alternative authentication adapters. */
+	public function test_prepared_connection( Mail_Catcher $mailer, Connection $connection ): Send_Result {
 		$debug = array();
 		$this->capture_debug( $mailer, $debug );
 
 		try {
-			$mailer->smtpConnect();
+			if ( ! $mailer->smtpConnect() ) {
+				return $this->failure( $mailer, $connection, $mailer->ErrorInfo, $debug );
+			}
 			return Send_Result::success( '', $debug );
 		} catch ( Exception $e ) {
 			return $this->failure( $mailer, $connection, $e->getMessage(), $debug );
@@ -186,6 +198,7 @@ final class Smtp_Provider implements Provider {
 	}
 
 	/**
+	 * @param list<string> $debug
 	 * @param list<string> $debug
 	 */
 	private function failure( Mail_Catcher $mailer, Connection $connection, string $message, array $debug ): Send_Result {
@@ -230,6 +243,8 @@ final class Smtp_Provider implements Provider {
 	 * Collects the SMTP dialogue without credentials (AUTH exchange) and without message content (DATA).
 	 *
 	 * @param list<string> $lines Receives the transcript.
+	 * @param list<string> $lines
+	 * @param-out list<string> $lines
 	 */
 	private function capture_debug( Mail_Catcher $mailer, array &$lines ): void {
 		$state               = 'normal';

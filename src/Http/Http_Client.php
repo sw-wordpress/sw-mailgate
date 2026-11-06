@@ -13,7 +13,7 @@ final class Http_Client {
 
 	/**
 	 * @param array<string, string> $headers
-	 * @return array{status: int, data: ?array, debug: list<string>, duration: float, ambiguous: bool}
+	 * @return array{status: int, data: ?array<mixed>, debug: list<string>, duration: float, ambiguous: bool}
 	 */
 	public function request( string $method, string $url, array $headers, string $body = '', int $timeout = 15 ): array {
 		$start     = microtime( true );

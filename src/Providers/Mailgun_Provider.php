@@ -14,7 +14,7 @@ use SWMailgate\Http\Http_Client;
 use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
 
-final class Mailgun_Provider implements Provider {
+final class Mailgun_Provider implements Provider, Webhook_Capable, Dns_Capable {
 
 	public function __construct( private readonly Http_Client $http = new Http_Client() ) {
 	}
@@ -43,6 +43,7 @@ final class Mailgun_Provider implements Provider {
 				__( 'Select the region where this Mailgun domain was created.', 'sw-mailgate' ),
 				true
 			),
+			Field::secret( 'webhook_signing_key', __( 'HTTP webhook signing key', 'sw-mailgate' ), __( 'Account-wide key from Mailgun > API Security. This is separate from the API key.', 'sw-mailgate' ), false ),
 			Field::secret( 'api_key', __( 'API key', 'sw-mailgate' ), __( 'Use a Mailgun API key, not an SMTP password. The connection test also requires permission to read domain details; a sending-only key may not allow that test.', 'sw-mailgate' ) ),
 			new Field( 'timeout', __( 'Timeout (seconds)', 'sw-mailgate' ), Field::NUMBER, false, '15', array(), __( 'HTTP timeout, between 5 and 60 seconds.', 'sw-mailgate' ) ),
 		);
@@ -103,7 +104,109 @@ final class Mailgun_Provider implements Provider {
 		return Send_Result::success( '', $response['debug'] )->with_duration( $response['duration'] );
 	}
 
-	/** @return array|Send_Result Validated credentials, never included in diagnostics. */
+	public function register_webhook( Connection $connection, string $url ): Send_Result {
+		$config = $this->configuration( $connection );
+		if ( $config instanceof Send_Result ) {
+			return $config;
+		}
+		if ( 'https' !== wp_parse_url( $url, PHP_URL_SCHEME ) || '' === $connection->get( 'webhook_signing_key' ) ) {
+			return Send_Result::failure( Send_Result::PERMANENT, __( 'HTTPS and a webhook signing key are required.', 'sw-mailgate' ) );
+		}
+		foreach ( array( 'delivered', 'permanent_fail', 'complained' ) as $event ) {
+			$endpoint = $config['base'] . '/v3/domains/' . rawurlencode( $config['domain'] ) . '/webhooks';
+			$current  = $this->http->request( 'GET', $endpoint . '/' . $event, $config['headers'] );
+			$urls     = $current['data']['webhook']['urls'] ?? array();
+			if ( 200 === $current['status'] && is_array( $urls ) && in_array( $url, $urls, true ) ) {
+				continue;
+			}
+			// Never replace an existing integration's endpoint.
+			if ( 404 !== $current['status'] ) {
+				return Send_Result::failure( Send_Result::PERMANENT, __( 'A webhook already exists or could not be read. Add this URL in Mailgun without replacing existing endpoints. Earlier event types may already be registered.', 'sw-mailgate' ) );
+			}
+			$upload   = $this->http->multipart(
+				array(
+					'id'  => $event,
+					'url' => $url,
+				),
+				array()
+			);
+			$response = $this->http->request( 'POST', $endpoint, array_merge( $config['headers'], $upload['headers'] ), $upload['body'] );
+			if ( $response['status'] < 200 || $response['status'] >= 300 ) {
+				return $this->failure( $response );
+			}
+		}
+		return Send_Result::success();
+	}
+
+	public function verify_request( Connection $connection, \WP_REST_Request $request ): string|false {
+		$data = $request->get_json_params();
+		$sig  = $data['signature'] ?? null;
+		$key  = $connection->get( 'webhook_signing_key' );
+		if ( '' === $key || ! is_array( $sig ) || ! is_string( $sig['timestamp'] ?? null ) || ! preg_match( '/^[0-9]{10}$/D', $sig['timestamp'] ) || abs( time() - (int) $sig['timestamp'] ) > 300 || ! is_string( $sig['token'] ?? null ) || ! preg_match( '/^[a-zA-Z0-9]{1,256}$/D', $sig['token'] ) || ! is_string( $sig['signature'] ?? null ) || ! preg_match( '/^[a-f0-9]{64}$/D', $sig['signature'] ) ) {
+			return false;
+		}
+		return hash_equals( hash_hmac( 'sha256', $sig['timestamp'] . $sig['token'], $key ), $sig['signature'] ) ? hash_hmac( 'sha256', $sig['token'], $key ) : false;
+	}
+
+	public function parse_events( \WP_REST_Request $request ): array {
+		$data  = $request->get_json_params();
+		$event = $data['event-data'] ?? null;
+		if ( ! is_array( $event ) ) {
+			return array();
+		}
+		$status = match ( $event['event'] ?? '' ) {
+			'delivered' => 'delivered',
+			'complained' => 'complained',
+			'failed' => 'permanent' === ( $event['severity'] ?? '' ) ? 'bounced' : '',
+			default => '',
+		};
+		$id         = $event['id'] ?? null;
+		$event_time = $event['timestamp'] ?? null;
+		if ( ( ! is_int( $event_time ) && ! is_float( $event_time ) ) || ! is_finite( (float) $event_time ) || $event_time < 0 || $event_time > 253402300799 ) {
+			return array();
+		}
+		$message = $event['message']['headers']['message-id'] ?? null;
+		if ( '' === $status || ! is_string( $id ) || '' === $id || strlen( $id ) > 255 || ! is_string( $message ) || '' === trim( $message, '<>' ) || strlen( $message ) > 998 || preg_match( '/[\\x00-\\x20\\x7f]/', $message ) ) {
+			return array();
+		}
+		return array(
+			array(
+				// Mailgun event IDs are unique within a day, not across the retention period.
+				'id'         => gmdate( 'Y-m-d', (int) $event_time ) . ':' . $id,
+				'message_id' => $message,
+				'status'     => $status,
+			),
+		);
+	}
+
+	public function dns_requirements( Connection $connection ): array {
+		$config = $this->configuration( $connection );
+		if ( $config instanceof Send_Result ) {
+			return array( 'error' => $config->message() );
+		}
+		$response = $this->http->request( 'GET', $config['base'] . '/v4/domains/' . rawurlencode( $config['domain'] ), $config['headers'] );
+		if ( 200 !== $response['status'] || ! is_array( $response['data']['sending_dns_records'] ?? null ) ) {
+			return array( 'error' => __( 'Mailgun DNS requirements could not be read. Check API permissions and retry.', 'sw-mailgate' ) );
+		}
+		$records = array();
+		foreach ( $response['data']['sending_dns_records'] as $record ) {
+			if ( is_array( $record ) && is_string( $record['name'] ?? null ) && is_string( $record['value'] ?? null ) && in_array( $record['record_type'] ?? '', array( 'TXT', 'CNAME', 'MX' ), true ) ) {
+				$records[] = array(
+					'name'  => $record['name'],
+					'type'  => $record['record_type'],
+					'value' => $record['value'],
+				);
+			}
+		}
+		return array(
+			'spf_include' => 'mailgun.org',
+			'dkim_domain' => $config['domain'],
+			'return_path' => $config['domain'],
+			'records'     => $records,
+		);
+	}
+
+	/** @return array{base: string, domain: string, key: string, timeout: int, headers: array<string, string>}|Send_Result Validated credentials, never included in diagnostics. */
 	private function configuration( Connection $connection ): array|Send_Result {
 		$domain = strtolower( trim( $connection->get( 'domain' ) ) );
 		$region = $connection->get( 'region', 'us' );
@@ -130,6 +233,9 @@ final class Mailgun_Provider implements Provider {
 		);
 	}
 
+	/**
+	 * @param array{status: int, data: ?array<mixed>, debug: list<string>, duration: float, ambiguous: bool} $response
+	 */
 	private function failure( array $response ): Send_Result {
 		$status  = $response['status'];
 		$message = match ( true ) {

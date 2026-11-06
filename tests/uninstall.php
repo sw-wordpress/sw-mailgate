@@ -26,6 +26,10 @@ $sw_mailgate_test_options = array(
 	'sw_mailgate_redirection' => array( 'target' => 'sink@example.test' ),
 	'sw_mailgate_failover'    => array( 'queue_enabled' => true ),
 	'sw_mailgate_health'      => array( 'smtp' => array( 'failures' => 3 ) ),
+	'sw_mailgate_dns_settings' => array( 'doh' => true ),
+	'sw_mailgate_dns_state' => array( 'fixture' ),
+	'_transient_sw_mailgate_dns_results' => array( 'fixture' ),
+	'_transient_timeout_sw_mailgate_dns_results' => 123,
 	'unrelated_option'       => 'keep',
 );
 if ( 'default' !== $sw_mailgate_test_mode ) {
@@ -50,6 +54,11 @@ function delete_option( string $name ): bool {
 	return true;
 }
 
+function delete_transient( string $key ): void {
+	delete_option( '_transient_' . $key );
+	delete_option( '_transient_timeout_' . $key );
+}
+
 function wp_roles(): object {
 	return (object) array( 'role_objects' => array( $GLOBALS['sw_mailgate_test_role'] ) );
 }
@@ -67,14 +76,14 @@ $wpdb = new class() {
 	public array $dropped = array();
 
 	public function prepare( string $query, string $table ): string {
-		if ( ! in_array( $table, array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue' ), true ) ) {
+		if ( ! in_array( $table, array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue', 'wp_sw_mailgate_events' ), true ) ) {
 			throw new RuntimeException( 'Unexpected table.' );
 		}
 		return str_replace( '%i', '`' . $table . '`', $query );
 	}
 
 	public function query( string $query ): void {
-		if ( ! preg_match( '/^DROP TABLE IF EXISTS `(wp_sw_mailgate_(?:log|queue))`$/', $query, $match ) ) {
+		if ( ! preg_match( '/^DROP TABLE IF EXISTS `(wp_sw_mailgate_(?:log|queue|events))`$/', $query, $match ) ) {
 			throw new RuntimeException( 'Unexpected uninstall query.' );
 		}
 		$this->dropped[] = $match[1];
@@ -83,8 +92,8 @@ $wpdb = new class() {
 
 require $sw_mailgate_test_root . '/uninstall.php';
 
-$sw_mailgate_test_tables = 'delete' === $sw_mailgate_test_mode ? array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue' ) : array();
-if ( $wpdb->dropped !== $sw_mailgate_test_tables || array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue' ) !== $sw_mailgate_test_cleared_hooks ) {
+$sw_mailgate_test_tables = 'delete' === $sw_mailgate_test_mode ? array( 'wp_sw_mailgate_log', 'wp_sw_mailgate_queue', 'wp_sw_mailgate_events' ) : array();
+if ( $wpdb->dropped !== $sw_mailgate_test_tables || array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue', 'sw_mailgate_dns_weekly', 'sw_mailgate_reconcile_events' ) !== $sw_mailgate_test_cleared_hooks ) {
 	throw new RuntimeException( 'Uninstall did not handle the tables and cron events correctly.' );
 }
 

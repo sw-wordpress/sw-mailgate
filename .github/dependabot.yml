@@ -1,0 +1,44 @@
+version: 2
+# Fewer, coherent PRs: security fixes per ecosystem, packages that must move together,
+# then routine updates. Runtime majors (shipped in the plugin) still arrive individually.
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      composer-security:
+        applies-to: security-updates
+        patterns: ['*']
+      php-dev-tools:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ['*']
+      npm-dev-tools:
+        dependency-type: development
+        update-types: [minor, patch, major]
+      npm-runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: ['*']
+        update-types: [minor, patch, major]

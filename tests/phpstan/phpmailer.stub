@@ -1,0 +1,29 @@
+<?php
+/**
+ * Corrects PHPDoc types of WordPress's bundled PHPMailer for static analysis only.
+ *
+ * @package SWMailgate
+ */
+
+namespace PHPMailer\PHPMailer;
+
+class PHPMailer {
+
+	/**
+	 * Null until getSMTPInstance() creates the instance.
+	 *
+	 * @var SMTP|null
+	 */
+	protected $smtp;
+}
+
+class SMTP {
+
+	/**
+	 * AUTH returns the list of advertised mechanisms.
+	 *
+	 * @param string $name
+	 * @return string|bool|array<int|string, mixed>|null
+	 */
+	public function getServerExt( $name ) {}
+}

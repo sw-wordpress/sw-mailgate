@@ -216,7 +216,7 @@ final class Admin_Page {
 
 		$settings = array();
 		$secrets  = array();
-		foreach ( $provider->fields() as $field ) {
+		foreach ( array_merge( $provider->fields(), Field::dns_fields() ) as $field ) {
 			// Locked inputs are disabled and not posted; keep the stored value for when the constant is removed.
 			if ( null !== $existing && $existing->is_locked( $field->key ) ) {
 				if ( ! $field->secret && array_key_exists( $field->key, $existing->settings() ) ) {
@@ -277,7 +277,8 @@ final class Admin_Page {
 		check_admin_referer( 'sw_mailgate_connection_' . $id );
 		$this->require_capability();
 
-		if ( null === $this->connections->find( $id ) ) {
+		$connection = $this->connections->find( $id );
+		if ( null === $connection ) {
 			$this->redirect( self::SLUG, 'not_found' );
 		}
 
@@ -285,24 +286,26 @@ final class Admin_Page {
 			case 'up':
 			case 'down':
 				$this->connections->move( $id, 'up' === $action ? -1 : 1 );
-				$this->redirect( self::SLUG, 'moved' );
+				$notice = 'moved';
 				break;
 			case 'enable':
 			case 'disable':
 				$this->connections->set_enabled( $id, 'enable' === $action );
-				$this->redirect( self::SLUG, 'enable' === $action ? 'enabled' : 'disabled' );
+				$notice = 'enable' === $action ? 'enabled' : 'disabled';
 				break;
 			case 'delete':
 				$this->connections->delete( $id );
 				$this->breaker?->forget( $id );
-				$this->redirect( self::SLUG, 'deleted' );
+				$notice = 'deleted';
 				break;
 			case 'reset':
-				$this->breaker?->close( $this->connections->find( $id ) );
-				$this->redirect( self::SLUG, 'reset' );
+				$this->breaker?->close( $connection );
+				$notice = 'reset';
 				break;
+			default:
+				$notice = 'not_found';
 		}
-		$this->redirect( self::SLUG, 'not_found' );
+		$this->redirect( self::SLUG, $notice );
 	}
 
 	public function handle_test_connection(): void {
@@ -441,7 +444,13 @@ final class Admin_Page {
 			return null;
 		}
 		delete_transient( $key );
-		return is_array( $results ) ? $results : null;
+		if ( ! is_array( $results ) || ! is_string( $results['title'] ?? null ) || ! is_array( $results['rows'] ?? null ) ) {
+			return null;
+		}
+		return array(
+			'title' => $results['title'],
+			'rows'  => array_values( array_filter( $results['rows'], 'is_array' ) ),
+		);
 	}
 
 	/**
@@ -500,6 +509,9 @@ final class Admin_Page {
 		include SW_MAILGATE_DIR . 'templates/admin/' . $name . '.php';
 	}
 
+	/**
+	 * @param array<string, mixed> $args
+	 */
 	public static function url( array $args = array(), string $page = self::SLUG ): string {
 		return add_query_arg( array_merge( array( 'page' => $page ), $args ), admin_url( 'admin.php' ) );
 	}

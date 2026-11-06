@@ -3,6 +3,9 @@
  * Every attempt for a message; stored bodies are displayed as escaped source.
  *
  * @package SWMailgate
+ *
+ * @var array<string, mixed> $row
+ * @var array<int, array<string, mixed>> $attempts
  */
 
 defined( 'ABSPATH' ) || exit;

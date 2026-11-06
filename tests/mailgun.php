@@ -55,6 +55,12 @@ $connection = $connections->find( 'mailgun' );
 $connections->save( array( 'id' => 'second', 'provider' => 'test', 'enabled' => true, 'from_email' => 'fallback@example.test' ) );
 $fields = array_column( $mailgun->fields(), null, 'key' );
 sw_mailgate_check( isset( $fields['domain'], $fields['region'], $fields['timeout'] ) && $fields['api_key']->secret, 'Mailgun exposes declarative settings with an encrypted secret field.' );
+// Regression: a float wp-config override (e.g. a timeout) used to throw a TypeError in Connection::constant().
+define( 'SW_MAILGATE_FLOATCFG_TIMEOUT', 20.5 );
+$connections->save( array( 'id' => 'floatcfg', 'provider' => 'mailgun', 'enabled' => false, 'settings' => array( 'timeout' => '15' ) ) );
+$float_connection = $connections->find( 'floatcfg' );
+sw_mailgate_check( null !== $float_connection && '20.5' === $float_connection->get( 'timeout' ) && $float_connection->is_locked( 'timeout' ), 'Float wp-config overrides are read as strings and locked.' );
+$connections->delete( 'floatcfg' );
 sw_mailgate_check( $key === $connection->get( 'api_key' ) && ! str_contains( wp_json_encode( get_option( Secret_Store::OPTION ) ), $stored_key ) && ! str_contains( wp_json_encode( get_option( Connection_Repository::OPTION ) ), $stored_key ), 'API key is retrieved from encrypted storage or wp-config and is absent from plain settings.' );
 
 $requests = array();

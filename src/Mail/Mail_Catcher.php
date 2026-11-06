@@ -28,7 +28,11 @@ final class Mail_Catcher extends \WP_PHPMailer {
 		$this->redirector = $redirector;
 	}
 
-	/** Includes addresses deferred by PHPMailer until preSend(), especially IDN recipients. */
+	/**
+	 * Includes addresses deferred by PHPMailer until preSend(), especially IDN recipients.
+	 *
+	 * @return array<string, array<int, array<int, string>>>
+	 */
 	public function recipient_groups(): array {
 		$groups = array(
 			'to'  => $this->getToAddresses(),

@@ -13,6 +13,9 @@ final class Redirection_Settings {
 
 	public const OPTION = 'sw_mailgate_redirection';
 
+	/**
+	 * @return array{target: string, valid: bool, locked: bool, allowlist: list<string>}
+	 */
 	public static function get(): array {
 		$stored = (array) get_option( self::OPTION, array() );
 		$locked = defined( 'SW_MAILGATE_REDIRECT_TO' );
@@ -34,7 +37,7 @@ final class Redirection_Settings {
 			return new \WP_Error( 'invalid_redirect', __( 'Enter one valid redirection address, or leave it empty to disable redirection.', 'sw-mailgate' ) );
 		}
 		$rules = array();
-		foreach ( preg_split( '/[\s,;]+/', trim( $allowlist ), -1, PREG_SPLIT_NO_EMPTY ) as $rule ) {
+		foreach ( preg_split( '/[\s,;]+/', trim( $allowlist ), -1, PREG_SPLIT_NO_EMPTY ) ?: array() as $rule ) {
 			$rule  = strtolower( str_starts_with( $rule, '@' ) ? substr( $rule, 1 ) : $rule );
 			$valid = str_contains( $rule, '@' ) ? is_email( $rule ) : is_email( 'mailgate@' . $rule );
 			if ( ! $valid || str_contains( $rule, '*' ) ) {

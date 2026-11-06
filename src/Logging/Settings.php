@@ -13,6 +13,9 @@ final class Settings {
 
 	public const OPTION = 'sw_mailgate_logging';
 
+	/**
+	 * @return array<mixed> Defaults merged with the stored option; `enabled` is always a bool.
+	 */
 	public static function get(): array {
 		return array_merge(
 			array(
@@ -26,6 +29,9 @@ final class Settings {
 		);
 	}
 
+	/**
+	 * @param array<string, mixed> $values
+	 */
 	public static function save( array $values ): void {
 		update_option(
 			self::OPTION,

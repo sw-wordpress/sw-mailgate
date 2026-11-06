@@ -13,7 +13,8 @@ use PHPMailer\PHPMailer\SMTP;
 
 class Tracked_SMTP extends SMTP {
 
-	private int $accepted   = 0;
+	private int $accepted = 0;
+	/** @var list<int> */
 	private array $rejected = array();
 	private bool $submitted = false;
 	private bool $delivered = false;
@@ -37,6 +38,11 @@ class Tracked_SMTP extends SMTP {
 		return $result;
 	}
 
+	/**
+	 * @param string         $command
+	 * @param string         $commandstring
+	 * @param int|array<int> $expect
+	 */
 	protected function sendCommand( $command, $commandstring, $expect ) { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid -- PHPMailer override.
 		if ( 'DATA END' === $command ) {
 			// Mark before writing the terminator: a missing final response is ambiguous.
@@ -52,7 +58,11 @@ class Tracked_SMTP extends SMTP {
 		return $result;
 	}
 
-	/** Counts and status codes only; no recipient addresses or message content. */
+	/**
+	 * Counts and status codes only; no recipient addresses or message content.
+	 *
+	 * @return array{accepted: int, rejected: list<int>, submitted: bool, delivered: bool, data_code: int}
+	 */
 	public function outcome(): array {
 		return array(
 			'accepted'  => $this->accepted,

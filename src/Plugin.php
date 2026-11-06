@@ -19,6 +19,7 @@ use SWMailgate\Providers\Smtp_Provider;
 use SWMailgate\Providers\Mailgun_Provider;
 use SWMailgate\Providers\Google_Provider;
 use SWMailgate\Providers\Office365_Provider;
+use SWMailgate\Providers\Smtp_OAuth_Provider;
 use SWMailgate\Admin\OAuth_Admin;
 use SWMailgate\Security\Secret_Store;
 use SWMailgate\Logging\Logger;
@@ -50,12 +51,18 @@ final class Plugin {
 
 		$secrets          = new Secret_Store();
 		$connections      = new Connection_Repository( $secrets );
-		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider(), new Google_Provider(), new Office365_Provider() ) );
+		$providers        = new Provider_Registry( array( new Smtp_Provider(), new Mailgun_Provider(), new Google_Provider(), new Office365_Provider(), new Smtp_OAuth_Provider(), new Smtp_OAuth_Provider( false ) ) );
 		$breaker          = new Circuit_Breaker();
 		$queue            = new Retry_Queue( $secrets );
 		$this->dispatcher = new Dispatcher( $connections, $providers, $breaker, $queue );
 		$this->redirector = new Redirector();
-		$logs             = new Log_Repository();
+		$webhooks         = new \SWMailgate\Tracking\Webhook_Controller( $connections, $providers );
+		add_action( 'rest_api_init', array( $webhooks, 'register' ) );
+		( new \SWMailgate\Dns\Dns_Monitor( $connections, $providers ) )->register();
+		add_action( 'init', array( \SWMailgate\Tracking\Event_Repository::class, 'schedule' ) );
+		add_action( \SWMailgate\Tracking\Event_Repository::CRON_HOOK, array( new \SWMailgate\Tracking\Event_Repository(), 'reconcile_pending' ) );
+		add_action( Logger::CRON_HOOK, array( \SWMailgate\Tracking\Event_Repository::class, 'retain' ), 20 );
+		$logs = new Log_Repository();
 		( new Logger( $logs ) )->register();
 		( new Privacy( $logs, $queue ) )->register();
 		add_action( 'init', array( Logger::class, 'schedule' ) );
@@ -69,6 +76,7 @@ final class Plugin {
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
+			( new \SWMailgate\Admin\Webhook_Admin( $connections, $providers ) )->register();
 			( new OAuth_Admin( $connections ) )->register();
 			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector, $breaker ) )->register();
 			( new Log_Page( $logs, $connections, $queue, $this->dispatcher ) )->register();
@@ -79,7 +87,10 @@ final class Plugin {
 		load_plugin_textdomain( 'sw-mailgate', false, dirname( plugin_basename( SW_MAILGATE_FILE ) ) . '/languages' );
 	}
 
-	/** @param null|bool $return Whether another filter already handled this mail. */
+	/**
+	 * @param mixed $return Whether another filter already handled this mail (null|bool).
+	 * @return mixed The unchanged filter value.
+	 */
 	public function prepare_mailer( $return ) {
 		if ( null === $return ) {
 			$this->install_mailer();

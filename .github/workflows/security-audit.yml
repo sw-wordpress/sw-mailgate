@@ -1,0 +1,92 @@
+name: Scheduled dependency audit
+
+# New advisories appear without any code change, so PR checks alone miss them.
+# This job audits all dependencies (shipped and dev) daily and keeps exactly one
+# open issue labelled `security-audit` up to date; it closes the issue once clean.
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: security-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LABEL: security-audit
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Run audits
+        id: audit
+        run: |
+          REPORT="$RUNNER_TEMP/audit-report.md"
+          echo "REPORT=$REPORT" >> "$GITHUB_ENV"
+          failed=0
+          section() { printf '\n### %s\n\n```text\n' "$1" >> "$REPORT"; }
+          endsection() { printf '```\n' >> "$REPORT"; }
+          printf '## Dependency audit\n\nRun: %s/%s/actions/runs/%s\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$REPORT"
+
+          section 'Composer (shipped and dev)'
+          composer audit --locked --no-interaction >> "$REPORT" 2>&1 || failed=1
+          endsection
+
+          section 'npm (root), shipped dependencies (high and above)'
+          npm audit --omit=dev --audit-level=high >> "$REPORT" 2>&1 || failed=1
+          endsection
+
+          section 'npm (root), all dependencies including dev tooling (high and above)'
+          npm audit --audit-level=high >> "$REPORT" 2>&1 || failed=1
+          endsection
+
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the audit issue
+        if: steps.audit.outputs.failed == '1'
+        run: |
+          gh label create "$LABEL" --color B60205 \
+            --description 'Known vulnerabilities in dependencies (scheduled audit)' 2>/dev/null || true
+          issue=$(gh issue list --label "$LABEL" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -z "$issue" ]; then
+            gh issue create --title 'Dependency audit: known vulnerabilities found' \
+              --label "$LABEL" --body-file "$REPORT"
+          else
+            # Only notify again when the findings changed (ignore the run link and blank lines).
+            findings() { grep -v -e '^Run: ' -e '^[[:space:]]*$' | tr -d '\r'; }
+            old=$(gh issue view "$issue" --json body --jq .body | findings)
+            if [ "$old" != "$(findings < "$REPORT")" ]; then
+              gh issue edit "$issue" --body-file "$REPORT"
+              gh issue comment "$issue" --body "Findings changed: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            fi
+          fi
+
+      - name: Close the audit issue when clean
+        if: steps.audit.outputs.failed == '0'
+        run: |
+          for issue in $(gh issue list --label "$LABEL" --state open --json number --jq '.[].number'); do
+            gh issue close "$issue" --comment "Audit is clean again: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          done
+
+      - name: Fail the run when vulnerabilities were found
+        if: steps.audit.outputs.failed == '1'
+        run: exit 1

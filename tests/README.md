@@ -1,5 +1,21 @@
 # Tests
 
+M7/M8 scenarios (same disposable WordPress/database configuration as below):
+
+    php tests/integration.php enabled tracking
+    php tests/integration.php unset tracking
+    php tests/integration.php enabled dns
+
+Included in the full runner. REST/HTTP/DNS fixtures cover signatures, timestamp
+windows, replay/event deduplication, out-of-order/early events, connection isolation,
+masked-ID correlation without provider redelivery, hourly recovery, caller transaction
+rollback, v5 schema migration, disabled logging, privacy,
+retention, registration permissions, bounce statistics and provider-specific UI.
+DNS covers SPF recursion/limits and all/redirect ordering, selectors/CNAMEs, DMARC, configured alignment,
+MX/PTR, native/DoH errors and explicit consent, cache identity, weekly deterioration,
+Site Health and authorization. No live provider account or public DNS is used.
+JavaScript tests cover webhook copying with and without clipboard access.
+
 M6 scenarios are included in the full runner and can be run separately:
 
     php tests/integration.php enabled oauth
@@ -10,7 +26,7 @@ Tests cover PKCE/state/session binding, replay/denial/expiry, encrypted tokens,
 rotation, cache/config invalidation, competing/stale refresh claims, disconnect
 during refresh, invalid token/scope responses, 401 renewal, MIME/Bcc, Gmail uploads,
 Graph modes/size limits, safe diagnostics, setup HTML and admin authorization.
-Connection tests deliberately do not claim to verify mailbox permissions.
+API connection tests acquire tokens; SMTP connection tests authenticate without submitting mail. A test mail is still needed to verify sender permissions.
 Reconnect regressions cover both callback/refresh overlap orders, retrying busy
 state without code consumption, and stale refresh completion after lock expiry.
 Successful reconnects invalidate older pending account authorizations.
@@ -62,8 +78,22 @@ One-time repository setup:
 
 The scan reports an explicit configuration error if either GitHub setting is
 missing. Do not place tokens in source files or pass them through test scripts.
-The existing SonarQube quality gate continues to control its analysis check;
-this change does not add an arbitrary coverage threshold.
+The SonarQube quality gate continues to control its analysis check.
+
+### Coverage gate (> 80 % lines, PHP and JavaScript)
+
+`tests/coverage/check.php` reads a Clover report's project metrics and fails when
+line coverage is **not strictly above 80 %** (exactly 80 % fails; integer comparison,
+no rounding). Missing, invalid or empty reports also fail. `tests/coverage-check.php`
+covers the boundaries and is part of `tests/run.php`.
+
+    composer test:coverage   # run.php --coverage, then the PHP gate
+    npm ci && npm run coverage:js   # node:test + c8 for assets/, then the JS gate
+
+PHP measures src/, templates/ and both entry points; JavaScript measures all of
+assets/ (`c8 --all`, reports in coverage/js/). CI enforces both: after the PHP 8.2
+coverage job and in the `javascript` job, whose LCOV report SonarQube imports.
+Do not lower the limit or exclude production files to pass.
 
 See the official [PHP coverage guide](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/test-coverage/php-test-coverage).
 
@@ -232,3 +262,29 @@ configuring the global mailer before the first send is not supported; configure 
 through the normal WordPress mail hooks instead. A later callback at the same final
 priority can still replace the global mailer; competing mailer plugins are not
 universally interoperable.
+
+## SMTP XOAUTH2 regression coverage
+
+The existing `enabled oauth` and `unset oauth` scenarios also include
+`smtp-oauth.php`: real PHPMailer SASL and SMTP transaction code with scripted
+transport I/O and intercepted token requests. Cases cover provider-specific
+scopes, encrypted refresh, login changes, fixed hosts/verified STARTTLS, no
+password-mechanism downgrade, SASL rejection/cancellation, credential redaction,
+SMTP authentication-only tests, failover and partial/uncertain delivery. Both
+WordPress's bundled OAuthTokenProvider and the compatibility copy for older
+WordPress releases are exercised by the supported-version CI matrix.
+`smtp-tls-policy.php` additionally uses a loopback TLS server to verify a real
+XOAUTH2 login and confirm that untrusted certificates or the wrong provider
+hostname prevent any bearer credential from being sent.
+
+## Dependency security
+
+Every push/PR fails on known advisories in shipped dependencies
+(`composer audit --locked --no-dev`, `npm audit --omit=dev --audit-level=high`; npm is
+test tooling only today). `.github/workflows/security-audit.yml` audits all dependencies
+daily and keeps one open issue labelled `security-audit` (watchers are notified; updates
+only when findings change) and closes it once clean. `.github/dependabot.yml` opens weekly
+grouped update PRs (security fixes, routine updates per ecosystem; Composer majors
+individually). Dependabot PRs get no repository secrets, so SonarQube runs for them only
+after merging to master. Enable Dependabot alerts and security
+updates in the repository settings.

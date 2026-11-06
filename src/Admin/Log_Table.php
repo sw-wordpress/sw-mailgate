@@ -17,6 +17,9 @@ if ( ! class_exists( '\WP_List_Table' ) ) {
 
 final class Log_Table extends \WP_List_Table {
 
+	/**
+	 * @param array<string, string> $filters
+	 */
 	public function __construct( private readonly Log_Repository $logs, private readonly array $filters ) {
 		parent::__construct(
 			array(
@@ -49,17 +52,29 @@ final class Log_Table extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * @param array<string, mixed> $item
+	 */
 	public function column_default( $item, $column_name ): string {
 		return esc_html( (string) ( $item[ $column_name ] ?? '' ) );
 	}
 
+	/**
+	 * @param array<string, mixed> $item
+	 */
 	public function column_subject( $item ): string {
 		return sprintf( '<a href="%s">%s</a>', esc_url( Admin_Page::url( array( 'log_id' => $item['id'] ), Log_Page::SLUG ) ), esc_html( '' === $item['subject'] ? __( '(no subject)', 'sw-mailgate' ) : $item['subject'] ) );
 	}
 
+	/**
+	 * @param array<string, mixed> $item
+	 */
 	public function column_status( $item ): string {
 		return esc_html(
 			match ( $item['status'] ) {
+			'delivered' => __( 'Delivered', 'sw-mailgate' ),
+			'bounced' => __( 'Bounced', 'sw-mailgate' ),
+			'complained' => __( 'Complained', 'sw-mailgate' ),
 			'sent'       => __( 'Sent', 'sw-mailgate' ),
 			'redirected' => __( 'Redirected', 'sw-mailgate' ),
 			'partial'    => __( 'Partial delivery', 'sw-mailgate' ),
@@ -70,6 +85,9 @@ final class Log_Table extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * @param array<string, mixed> $item
+	 */
 	public function column_recipients( $item ): string {
 		return esc_html( implode( ', ', (array) json_decode( $item['recipients'], true ) ) );
 	}

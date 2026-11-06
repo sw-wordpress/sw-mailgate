@@ -21,6 +21,10 @@ final class Privacy {
 		add_filter( 'wp_privacy_personal_data_erasers', array( $this, 'erasers' ) );
 	}
 
+	/**
+	 * @param array<mixed> $exporters
+	 * @return array<mixed>
+	 */
 	public function exporters( array $exporters ): array {
 		$exporters['sw-mailgate'] = array(
 			'exporter_friendly_name' => __( 'SW Mailgate mail log', 'sw-mailgate' ),
@@ -29,6 +33,10 @@ final class Privacy {
 		return $exporters;
 	}
 
+	/**
+	 * @param array<mixed> $erasers
+	 * @return array<mixed>
+	 */
 	public function erasers( array $erasers ): array {
 		$erasers['sw-mailgate'] = array(
 			'eraser_friendly_name' => __( 'SW Mailgate mail log', 'sw-mailgate' ),
@@ -37,6 +45,9 @@ final class Privacy {
 		return $erasers;
 	}
 
+	/**
+	 * @return array{data: list<array{group_id: string, group_label: string, item_id: string, data: list<array{name: string, value: string}>}>, done: bool}
+	 */
 	public function export( string $email, int $page = 1 ): array {
 		$rows = $this->logs->personal( $email, 100, ( max( 1, $page ) - 1 ) * 100 );
 		$data = array();
@@ -66,6 +77,9 @@ final class Privacy {
 		);
 	}
 
+	/**
+	 * @return array{items_removed: bool, items_retained: bool, messages: list<string>, done: bool}
+	 */
 	public function erase( string $email, int $page = 1 ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required WordPress callback signature.
 		// Deletion changes the result set, so always take the first batch.
 		$rows     = $this->logs->personal( $email );

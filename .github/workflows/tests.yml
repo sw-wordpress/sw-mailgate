@@ -35,7 +35,7 @@ jobs:
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -45,6 +45,18 @@ jobs:
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: composer validate --strict
       - run: composer cs
+      - name: Audit shipped Composer dependencies for known vulnerabilities
+        if: matrix.coverage
+        # Composer errors instead of skipping when the lock file has no runtime packages.
+        run: |
+          if [ "$(php -r 'echo count(json_decode(file_get_contents("composer.lock"), true)["packages"]);')" = 0 ]; then
+            echo 'No runtime Composer packages are shipped; nothing to audit.'
+          else
+            composer audit --locked --no-dev
+          fi
+      - name: PHPStan level 8
+        if: matrix.coverage
+        run: composer stan
       - name: Install WordPress test files
         env:
           WP_VERSION: ${{ matrix.wordpress }}
@@ -69,30 +81,63 @@ jobs:
           fi
       - name: Upload Clover coverage
         if: matrix.coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: php-coverage
           path: coverage/clover.xml
           if-no-files-found: error
           retention-days: 14
+      - name: Enforce PHP line coverage > 80 %
+        if: matrix.coverage
+        run: php tests/coverage/check.php coverage/clover.xml PHP
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - run: npm ci --no-audit --no-fund
+      - name: Audit shipped npm dependencies for known vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+      - name: Run JavaScript tests and enforce line coverage > 80 %
+        run: npm run coverage:js
+      - name: Upload LCOV coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: js-coverage
+          path: coverage/js/lcov.info
+          if-no-files-found: error
+          retention-days: 14
 
   sonarqube:
     name: SonarQube Cloud
-    needs: integration
+    needs: [integration, javascript]
     if: >-
       (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository) ||
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'push' &&
        github.ref_name == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: php-coverage
           path: coverage
+      - uses: actions/download-artifact@v8
+        with:
+          name: js-coverage
+          path: coverage/js
       - name: Check SonarQube configuration
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -107,8 +152,9 @@ jobs:
             exit 1
           fi
           test -s coverage/clover.xml
+          test -s coverage/js/lcov.info
       - name: Analyze code and import coverage
-        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
         with:
           args: >-
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}

@@ -12,15 +12,18 @@ namespace SWMailgate\OAuth;
 use SWMailgate\Connections\Connection;
 use SWMailgate\Connections\Connection_Repository;
 use SWMailgate\Http\Http_Client;
+use SWMailgate\Json;
 use SWMailgate\Providers\Send_Result;
 use SWMailgate\Security\Secret_Store;
 
 final class OAuth_Client {
 
-	public const GOOGLE_SCOPE  = 'https://www.googleapis.com/auth/gmail.send';
-	public const GRAPH_SCOPE   = 'https://graph.microsoft.com/Mail.Send';
-	private const STATE_PREFIX = 'sw_mailgate_oauth_state_';
-	private const LOCK_PREFIX  = '_transient_sw_mailgate_oauth_lock_';
+	public const GOOGLE_SCOPE         = 'https://www.googleapis.com/auth/gmail.send';
+	public const GRAPH_SCOPE          = 'https://graph.microsoft.com/Mail.Send';
+	public const GOOGLE_SMTP_SCOPE    = 'https://mail.google.com/';
+	public const MICROSOFT_SMTP_SCOPE = 'https://outlook.office.com/SMTP.Send';
+	private const STATE_PREFIX        = 'sw_mailgate_oauth_state_';
+	private const LOCK_PREFIX         = '_transient_sw_mailgate_oauth_lock_';
 
 	public function __construct(
 		private readonly Http_Client $http = new Http_Client(),
@@ -28,25 +31,45 @@ final class OAuth_Client {
 	) {}
 
 	public static function supports( string $provider ): bool {
-		return in_array( $provider, array( 'google', 'office365' ), true );
+		return in_array( $provider, array( 'google', 'office365', 'google_smtp', 'office365_smtp' ), true );
+	}
+
+	public static function smtp( string $provider ): bool {
+		return in_array( $provider, array( 'google_smtp', 'office365_smtp' ), true );
+	}
+
+	public static function google( string $provider ): bool {
+		return in_array( $provider, array( 'google', 'google_smtp' ), true );
+	}
+
+	private static function scope( Connection $connection ): string {
+		return match ( $connection->provider() ) {
+			'google_smtp' => self::GOOGLE_SMTP_SCOPE,
+			'office365_smtp' => self::MICROSOFT_SMTP_SCOPE,
+			'google' => self::GOOGLE_SCOPE,
+			default => self::GRAPH_SCOPE,
+		};
 	}
 
 	public static function delegated( Connection $connection ): bool {
-		return 'google' === $connection->provider() || 'delegated' === $connection->get( 'mode', 'delegated' );
+		return self::google( $connection->provider() ) || self::smtp( $connection->provider() ) || 'delegated' === $connection->get( 'mode', 'delegated' );
 	}
 
 	public static function redirect_uri(): string {
 		return admin_url( 'admin-post.php?action=sw_mailgate_oauth_callback', 'https' );
 	}
 
-	/** @return array|Send_Result Validated configuration, never rendered or logged. */
+	/** @return array{client_id: string, client_secret: string, authorize: string, token: string, scope: string}|Send_Result Validated configuration, never rendered or logged. */
 	private function configuration( Connection $connection ): array|Send_Result {
 		$id     = $connection->get( 'client_id' );
 		$secret = $connection->get( 'client_secret' );
 		if ( ! self::supports( $connection->provider() ) || '' === $id || strlen( $id ) > 512 || preg_match( '/[\x00-\x20\x7f]/', $id ) || '' === $secret || preg_match( '/[\x00-\x1f\x7f]/', $secret ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'Save a valid OAuth client ID and client secret first.', 'sw-mailgate' ) );
 		}
-		$google = 'google' === $connection->provider();
+		$google = self::google( $connection->provider() );
+		if ( self::smtp( $connection->provider() ) && ( ! is_email( $connection->get( 'username' ) ) || 'delegated' !== $connection->get( 'mode', 'delegated' ) ) ) {
+			return Send_Result::failure( Send_Result::AUTH, __( 'SMTP OAuth requires a valid mailbox login address and delegated authorization. Application access is available through the Microsoft Graph provider.', 'sw-mailgate' ) );
+		}
 		$tenant = $connection->get( 'tenant_id' );
 		if ( ! $google && ( ! preg_match( '/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iD', $tenant ) || ! in_array( $connection->get( 'mode', 'delegated' ), array( 'delegated', 'application' ), true ) ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'Microsoft 365 requires a directory (tenant) UUID and a valid authorization mode.', 'sw-mailgate' ) );
@@ -60,15 +83,17 @@ final class OAuth_Client {
 			'client_secret' => $secret,
 			'authorize'     => $google ? 'https://accounts.google.com/o/oauth2/v2/auth' : $base . 'authorize',
 			'token'         => $google ? 'https://oauth2.googleapis.com/token' : $base . 'token',
-			'scope'         => $google ? self::GOOGLE_SCOPE : ( self::delegated( $connection ) ? self::GRAPH_SCOPE . ' offline_access' : 'https://graph.microsoft.com/.default' ),
+			'scope'         => $google ? self::scope( $connection ) : ( self::delegated( $connection ) ? self::scope( $connection ) . ' offline_access' : 'https://graph.microsoft.com/.default' ),
 		);
 	}
 
 	/** Bind credentials, tenant, mode, mailbox, site and credential generation. */
 	private function fingerprint( Connection $connection ): string {
+		// Preserve existing API fingerprints; SMTP grants also belong to one login mailbox.
+		$login = self::smtp( $connection->provider() ) ? array( $connection->get( 'username' ) ) : array();
 		return hash(
 			'sha256',
-			wp_json_encode(
+			Json::encode(
 				array(
 					get_current_blog_id(),
 					self::redirect_uri(),
@@ -80,6 +105,7 @@ final class OAuth_Client {
 					$connection->get( 'mode', 'delegated' ),
 					$connection->get( 'mailbox' ),
 					$this->secrets->get( Connection::secret_name( $connection->id(), 'oauth_generation' ) ),
+					...$login,
 				)
 			)
 		);
@@ -97,6 +123,9 @@ final class OAuth_Client {
 		return null !== $tokens && ( ! empty( $tokens['refresh_token'] ) || (int) ( $tokens['expires_at'] ?? 0 ) > time() );
 	}
 
+	/**
+	 * @return array<mixed>|null Decoded token record bound to the current fingerprint.
+	 */
 	private function stored( Connection $connection ): ?array {
 		$tokens = json_decode( $this->secrets->get( Connection::secret_name( $connection->id(), 'oauth_tokens' ) ) ?? '', true );
 		return is_array( $tokens ) && isset( $tokens['fingerprint'] ) && hash_equals( $this->fingerprint( $connection ), (string) $tokens['fingerprint'] ) ? $tokens : null;
@@ -126,7 +155,7 @@ final class OAuth_Client {
 			'fingerprint' => $this->fingerprint( $connection ),
 			'verifier'    => $verifier,
 		);
-		if ( ! set_transient( self::STATE_PREFIX . hash( 'sha256', $state ), $this->secrets->seal( wp_json_encode( $payload ) ), 10 * MINUTE_IN_SECONDS ) ) {
+		if ( ! set_transient( self::STATE_PREFIX . hash( 'sha256', $state ), $this->secrets->seal( Json::encode( $payload ) ), 10 * MINUTE_IN_SECONDS ) ) {
 			return Send_Result::failure( Send_Result::TRANSIENT, __( 'OAuth authorization could not be started. Try again.', 'sw-mailgate' ) );
 		}
 		$params = array(
@@ -139,7 +168,7 @@ final class OAuth_Client {
 			'code_challenge'        => rtrim( strtr( base64_encode( hash( 'sha256', $verifier, true ) ), '+/', '-_' ), '=' ),
 			'code_challenge_method' => 'S256',
 		);
-		if ( 'google' === $connection->provider() ) {
+		if ( self::google( $connection->provider() ) ) {
 			$params['access_type'] = 'offline';
 			$params['prompt']      = 'consent';
 		} else {
@@ -203,7 +232,12 @@ final class OAuth_Client {
 		}
 	}
 
-	/** Serialize authorization-code exchanges with refreshes for the same connection. */
+	/**
+	 * Serialize authorization-code exchanges with refreshes for the same connection.
+	 *
+	 * @param array{client_id: string, client_secret: string, authorize: string, token: string, scope: string} $config
+	 * @param array<mixed>                                                                                     $payload Decrypted state payload.
+	 */
 	private function redeem( Connection $connection, array $config, array $payload, string $key, string $sealed, string $code ): Send_Result {
 		$lock = $this->lock( 'refresh-' . $connection->id() );
 		if ( null === $lock ) {
@@ -244,7 +278,8 @@ final class OAuth_Client {
 		if ( ! $force && null !== $tokens && (int) ( $tokens['expires_at'] ?? 0 ) > time() + 60 ) {
 			return $tokens['access_token'];
 		}
-		if ( self::delegated( $connection ) && empty( $tokens['refresh_token'] ) ) {
+		$delegated = self::delegated( $connection );
+		if ( $delegated && empty( $tokens['refresh_token'] ) ) {
 			return Send_Result::failure( Send_Result::AUTH, __( 'Connect this mailbox in the connection editor before sending.', 'sw-mailgate' ) );
 		}
 		$lock = $this->lock( 'refresh-' . $connection->id() );
@@ -259,10 +294,10 @@ final class OAuth_Client {
 				return $fresh['access_token'];
 			}
 			$tokens = $fresh;
-			if ( self::delegated( $connection ) && empty( $tokens['refresh_token'] ) ) {
+			if ( $delegated && empty( $tokens['refresh_token'] ) ) {
 				return Send_Result::failure( Send_Result::AUTH, __( 'Reconnect this mailbox before sending.', 'sw-mailgate' ) );
 			}
-			$grant = self::delegated( $connection )
+			$grant = $delegated
 				? array(
 					'grant_type'    => 'refresh_token',
 					'refresh_token' => $tokens['refresh_token'],
@@ -277,6 +312,11 @@ final class OAuth_Client {
 		}
 	}
 
+	/**
+	 * @param array{client_id: string, client_secret: string, authorize: string, token: string, scope: string} $config
+	 * @param array<string, string>                                                                            $grant
+	 * @param array<mixed>|null                                                                                $previous
+	 */
 	private function exchange( Connection $connection, array $config, array $grant, ?array $previous, bool $require_refresh = false ): string|Send_Result {
 		$fingerprint = $this->fingerprint( $connection );
 		$response    = $this->http->request(
@@ -316,7 +356,7 @@ final class OAuth_Client {
 			return Send_Result::failure( Send_Result::AUTH, __( 'The provider returned incomplete OAuth credentials. Reconnect and allow offline access.', 'sw-mailgate' ) );
 		}
 		if ( isset( $data['scope'] ) && self::delegated( $connection ) ) {
-			$required = 'google' === $connection->provider() ? self::GOOGLE_SCOPE : self::GRAPH_SCOPE;
+			$required = self::scope( $connection );
 			$scopes   = explode( ' ', (string) $data['scope'] );
 			if ( ! in_array( $required, $scopes, true ) && ! ( 'office365' === $connection->provider() && in_array( 'Mail.Send', $scopes, true ) ) ) {
 				return Send_Result::failure( Send_Result::AUTH, __( 'The required mail sending permission was not granted. Reconnect and approve it.', 'sw-mailgate' ) );
@@ -333,7 +373,7 @@ final class OAuth_Client {
 		}
 		$this->secrets->set(
 			Connection::secret_name( $connection->id(), 'oauth_tokens' ),
-			wp_json_encode(
+			Json::encode(
 				array(
 					'fingerprint'   => $fingerprint,
 					'access_token'  => $access,
@@ -352,7 +392,7 @@ final class OAuth_Client {
 	 * Atomic expiring transient claim. DB uniqueness also works across PHP workers
 	 * with persistent object caches; an expired owner cannot release a newer claim.
 	 *
-	 * @return array|null Name/value pair for conditional release.
+	 * @return array{0: string, 1: array{owner: string, until: int}}|null Name/value pair for conditional release.
 	 */
 	private function lock( string $name ): ?array {
 		$key   = self::LOCK_PREFIX . hash( 'sha256', $name );
@@ -372,6 +412,9 @@ final class OAuth_Client {
 		return array( $key, $value );
 	}
 
+	/**
+	 * @param array{0: string, 1: array<mixed>} $lock
+	 */
 	private function unlock( array $lock ): void {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Compare-and-delete protects a newer lock owner.

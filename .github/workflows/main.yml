@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Determine repository name and version
         id: metadata
@@ -88,6 +88,7 @@ jobs:
             --exclude='/.gitignore' \
             --exclude='/.editorconfig' \
             --exclude='/.phpcs.cache' \
+            --exclude='/.phpstan.cache/' \
             --exclude='/vendor/' \
             --exclude='/tests/' \
             --exclude='/coverage/' \
@@ -99,7 +100,10 @@ jobs:
             --exclude='*.zip' \
             --exclude='/composer.json' \
             --exclude='/composer.lock' \
+            --exclude='/package.json' \
+            --exclude='/package-lock.json' \
             --exclude='/phpcs.xml*' \
+            --exclude='/phpstan.neon*' \
             ./ "$STAGING/"
 
           # Prove that the plugin boots without the original vendor directory.
@@ -135,7 +139,7 @@ jobs:
           php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" default
 
       - name: Create release and attach ZIP
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ steps.metadata.outputs.version }}
           files: ${{ steps.metadata.outputs.zip }}

@@ -1,0 +1,13 @@
+{
+  "name": "sw-mailgate",
+  "private": true,
+  "description": "Development-only JavaScript tests and coverage for SW Mailgate.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "test:js": "node --test tests/js/admin.test.js",
+    "coverage:js": "c8 --all --src assets --include \"assets/**/*.js\" --reporter text --reporter clover --reporter lcov --report-dir coverage/js node --test tests/js/admin.test.js && php tests/coverage/check.php coverage/js/clover.xml JavaScript"
+  },
+  "devDependencies": {
+    "c8": "^12.0.0"
+  }
+}

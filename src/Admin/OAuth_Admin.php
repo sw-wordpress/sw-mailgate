@@ -79,7 +79,7 @@ final class OAuth_Admin {
 		// phpcs:enable
 		$outcome = $this->client->callback( $state, $code, $denied );
 		$result  = $outcome['result'];
-		if ( $result->is_success() ) {
+		if ( $result->is_success() && null !== $outcome['connection'] ) {
 			( new Circuit_Breaker() )->close( $outcome['connection'] );
 			$result = $result->reclassify( '', __( 'OAuth mailbox connected. You can now send a test mail.', 'sw-mailgate' ) );
 		}

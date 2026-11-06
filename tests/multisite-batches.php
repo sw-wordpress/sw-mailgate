@@ -47,19 +47,25 @@ function restore_current_blog(): void {
 function get_option( string $key, mixed $default = false ): mixed { return $GLOBALS['sw_mailgate_options'][ $GLOBALS['sw_mailgate_site'] ][ $key ] ?? $default; }
 function delete_option( string $key ): void { unset( $GLOBALS['sw_mailgate_options'][ $GLOBALS['sw_mailgate_site'] ][ $key ] ); }
 function wp_clear_scheduled_hook( string $hook ): void {
-	if ( ! in_array( $hook, array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue' ), true ) ) { throw new RuntimeException( 'Unexpected cron hook.' ); }
+	if ( ! in_array( $hook, array( 'sw_mailgate_log_retention', 'sw_mailgate_process_queue', 'sw_mailgate_dns_weekly', 'sw_mailgate_reconcile_events' ), true ) ) { throw new RuntimeException( 'Unexpected cron hook.' ); }
 	$GLOBALS['sw_mailgate_cleared'][ $hook ][] = $GLOBALS['sw_mailgate_site'];
 }
+function delete_transient( string $key ): void {
+	delete_option( '_transient_' . $key );
+	delete_option( '_transient_timeout_' . $key );
+}
+
 function wp_roles(): object { return (object) array( 'role_objects' => array( $GLOBALS['sw_mailgate_roles'][ $GLOBALS['sw_mailgate_site'] ] ) ); }
 $wpdb = new class() {
 	public string $prefix = 'wp_7_';
 	public array $dropped = array();
 	public array $dropped_queue = array();
 	public function prepare( string $sql, string $table ): string {
-		if ( ! in_array( $table, array( $this->prefix . 'sw_mailgate_log', $this->prefix . 'sw_mailgate_queue' ), true ) ) { throw new RuntimeException( 'Wrong table context.' ); }
+		if ( ! in_array( $table, array( $this->prefix . 'sw_mailgate_log', $this->prefix . 'sw_mailgate_queue', $this->prefix . 'sw_mailgate_events' ), true ) ) { throw new RuntimeException( 'Wrong table context.' ); }
 		return str_replace( '%i', '`' . $table . '`', $sql );
 	}
 	public function query( string $sql ): void {
+		if ( 'DROP TABLE IF EXISTS `' . $this->prefix . 'sw_mailgate_events`' === $sql ) { return; }
 		if ( 'DROP TABLE IF EXISTS `' . $this->prefix . 'sw_mailgate_queue`' === $sql ) {
 			$this->dropped_queue[] = $GLOBALS['sw_mailgate_site'];
 			return;

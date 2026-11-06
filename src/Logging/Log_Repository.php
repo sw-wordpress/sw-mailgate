@@ -18,22 +18,39 @@ final class Log_Repository {
 		return $wpdb->prefix . 'sw_mailgate_log';
 	}
 
+	/**
+	 * @param array<string, mixed> $row
+	 */
 	public function insert( array $row ): void {
 		global $wpdb;
-		$wpdb->insert( self::table(), $row );
+		if ( false !== $wpdb->insert( self::table(), $row ) ) {
+			$hash = $row['provider_message_hash'] ?? self::message_hash( (string) ( $row['provider_message_id'] ?? '' ) );
+			( new \SWMailgate\Tracking\Event_Repository() )->reconcile( $row['connection_id'], $row['provider'], $hash, (string) ( $row['provider_message_id'] ?? '' ) );
+		}
 	}
 
+	/**
+	 * @return array<string, mixed>|null
+	 */
 	public function find( int $id ): ?array {
 		global $wpdb;
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', self::table(), $id ), ARRAY_A );
 	}
 
+	/**
+	 * @return array<int, array<string, mixed>>
+	 */
 	public function attempts( string $group ): array {
 		global $wpdb;
 		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE attempt_group = %s ORDER BY attempt_number, id', self::table(), $group ), ARRAY_A );
 	}
 
-	/** Filters are shared by the list and CSV export. */
+	/**
+	 * Filters are shared by the list and CSV export.
+	 *
+	 * @param array<string, string> $filters
+	 * @return array{string, list<string>}
+	 */
 	private function where( array $filters ): array {
 		global $wpdb;
 		$where  = array( '1=1' );
@@ -62,6 +79,10 @@ final class Log_Repository {
 		return array( implode( ' AND ', $where ), $values );
 	}
 
+	/**
+	 * @param array<string, string> $filters
+	 * @return array<int, array<string, mixed>>
+	 */
 	public function search( array $filters = array(), int $limit = 20, int $offset = 0 ): array {
 		global $wpdb;
 		list( $where, $values ) = $this->where( $filters );
@@ -75,6 +96,9 @@ final class Log_Repository {
 		);
 	}
 
+	/**
+	 * @param array<string, string> $filters
+	 */
 	public function count( array $filters = array() ): int {
 		global $wpdb;
 		list( $where, $values ) = $this->where( $filters );
@@ -84,7 +108,11 @@ final class Log_Repository {
 		);
 	}
 
-	/** Count the final outcome of each mail, rather than counting failed failover attempts. */
+	/**
+	 * Count the final outcome of each mail, rather than counting failed failover attempts.
+	 *
+	 * @return array<string, int>
+	 */
 	public function totals( int $days ): array {
 		global $wpdb;
 		$rows   = $wpdb->get_results(
@@ -107,6 +135,25 @@ final class Log_Repository {
 		return $totals;
 	}
 
+	/** @return array{accepted: int, bounced: int} */
+	public function tracking_totals( int $days ): array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS accepted, COALESCE(SUM(l.status = 'bounced' OR EXISTS (SELECT 1 FROM %i e WHERE e.log_id = l.id AND e.status = 'bounced')), 0) AS bounced FROM %i l INNER JOIN (SELECT MAX(id) AS id FROM %i WHERE created_at >= %s GROUP BY attempt_group) latest ON l.id = latest.id WHERE l.status IN ('sent', 'redirected', 'delivered', 'bounced', 'complained')",
+				\SWMailgate\Tracking\Event_Repository::table(),
+				self::table(),
+				self::table(),
+				gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS )
+			),
+			ARRAY_A
+		);
+		return array(
+			'accepted' => (int) ( $row['accepted'] ?? 0 ),
+			'bounced'  => (int) ( $row['bounced'] ?? 0 ),
+		);
+	}
+
 	public function retain(): void {
 		global $wpdb;
 		$wpdb->query(
@@ -114,11 +161,18 @@ final class Log_Repository {
 		);
 	}
 
+	public static function message_hash( string $id ): string {
+		return '' === $id ? '' : hash_hmac( 'sha256', trim( $id, '<>' ), wp_salt( 'auth' ) );
+	}
+
 	/** HMACs keep privacy requests possible even when addresses are masked. */
 	public static function address_hash( string $email ): string {
 		return hash_hmac( 'sha256', strtolower( trim( $email ) ), wp_salt( 'auth' ) );
 	}
 
+	/**
+	 * @return array<int, array<string, mixed>>
+	 */
 	public function personal( string $email, int $limit = 100, int $offset = 0 ): array {
 		global $wpdb;
 		return $wpdb->get_results(
@@ -129,6 +183,9 @@ final class Log_Repository {
 
 	public function delete( int $id ): bool {
 		global $wpdb;
+		if ( false === $wpdb->delete( \SWMailgate\Tracking\Event_Repository::table(), array( 'log_id' => $id ), array( '%d' ) ) ) {
+			return false;
+		}
 		return false !== $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
 	}
 }

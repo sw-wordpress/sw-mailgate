@@ -21,6 +21,7 @@ if ( $collect ) {
 }
 
 $scenarios = array(
+	array( 'tests/coverage-check.php' ),
 	array( 'tests/bootstrap.php' ),
 	array( 'tests/uninstall.php', '.', 'delete' ),
 	array( 'tests/uninstall.php', '.', 'preserve' ),
@@ -38,6 +39,10 @@ foreach ( array( array( 'enabled', 'api' ), array( 'unset', 'api' ), array( 'ena
 	$scenarios[] = array( 'tests/integration.php', $logging, 'mailgun', $mode );
 }
 $scenarios[] = array( 'tests/integration.php', 'enabled', 'failover', 'run' );
+foreach ( array( 'enabled', 'unset' ) as $mode ) {
+	$scenarios[] = array( 'tests/integration.php', $mode, 'tracking' );
+}
+$scenarios[] = array( 'tests/integration.php', 'enabled', 'dns' );
 $scenarios[] = array( 'tests/integration.php', 'enabled', 'oauth' );
 $scenarios[] = array( 'tests/integration.php', 'unset', 'oauth' );
 foreach ( array( 'smtp', 'editor', 'editor-false', 'secrets' ) as $mode ) {

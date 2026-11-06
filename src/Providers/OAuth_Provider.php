@@ -15,7 +15,8 @@ use SWMailgate\Mail\Envelope;
 use SWMailgate\Mail\Mail_Catcher;
 use SWMailgate\OAuth\OAuth_Client;
 
-abstract class OAuth_Provider implements Provider {
+abstract class OAuth_Provider implements Provider, Dns_Capable {
+	use Default_Dns_Requirements;
 
 	public function __construct(
 		protected readonly Http_Client $http = new Http_Client(),
@@ -26,6 +27,9 @@ abstract class OAuth_Provider implements Provider {
 		// The dispatcher prepares SMTP MIME. HTTP providers never call postSend().
 	}
 
+	/**
+	 * @return list<Field>
+	 */
 	protected function client_fields(): array {
 		return array(
 			new Field( 'client_id', __( 'Client ID', 'sw-mailgate' ), required: true ),
@@ -37,40 +41,50 @@ abstract class OAuth_Provider implements Provider {
 	/**
 	 * A definite 401 can be retried once with a renewed token. Never replay ambiguous
 	 * sends or successful submissions, including successful responses without metadata.
+	 *
+	 * @return array{status: int, data: ?array<mixed>, debug: list<string>, duration: float, ambiguous: bool}|Send_Result
 	 */
 	protected function request( Connection $connection, string $url, string $body, string $content_type ): array|Send_Result {
 		$token = $this->oauth->access_token( $connection );
 		if ( $token instanceof Send_Result ) {
 			return $token;
 		}
-		for ( $attempt = 0; $attempt < 2; ++$attempt ) {
-			$response = $this->http->request(
-				'POST',
-				$url,
-				array(
-					'Authorization' => 'Bearer ' . $token,
-					'Content-Type'  => $content_type,
-					'Accept'        => 'application/json',
-				),
-				$body,
-				(int) $connection->get( 'timeout', '15' )
-			);
-			if ( 401 !== $response['status'] || 1 === $attempt ) {
-				$id     = $response['data']['id'] ?? null;
-				$secret = $connection->get( 'client_secret' );
-				if ( is_string( $id ) && ( str_contains( $id, $token ) || ( '' !== $secret && str_contains( $id, $secret ) ) ) ) {
-					$response['data']['id'] = null;
-				}
-				return $response;
-			}
+		$response = $this->post( $connection, $url, $body, $content_type, $token );
+		if ( 401 === $response['status'] ) {
 			$token = $this->oauth->access_token( $connection, true );
 			if ( $token instanceof Send_Result ) {
 				return $token;
 			}
+			$response = $this->post( $connection, $url, $body, $content_type, $token );
+		}
+		$id     = $response['data']['id'] ?? null;
+		$secret = $connection->get( 'client_secret' );
+		if ( is_string( $id ) && ( str_contains( $id, $token ) || ( '' !== $secret && str_contains( $id, $secret ) ) ) ) {
+			$response['data']['id'] = null;
 		}
 		return $response;
 	}
 
+	/**
+	 * @return array{status: int, data: ?array<mixed>, debug: list<string>, duration: float, ambiguous: bool}
+	 */
+	private function post( Connection $connection, string $url, string $body, string $content_type, string $token ): array {
+		return $this->http->request(
+			'POST',
+			$url,
+			array(
+				'Authorization' => 'Bearer ' . $token,
+				'Content-Type'  => $content_type,
+				'Accept'        => 'application/json',
+			),
+			$body,
+			(int) $connection->get( 'timeout', '15' )
+		);
+	}
+
+	/**
+	 * @param array{status: int, data: ?array<mixed>, debug: list<string>, duration: float, ambiguous: bool} $response
+	 */
 	protected function failure( array $response ): Send_Result {
 		$status  = $response['status'];
 		$class   = in_array( $status, array( 401, 403, 404 ), true ) ? Send_Result::AUTH : Send_Result::class_for_http_status( $status );
