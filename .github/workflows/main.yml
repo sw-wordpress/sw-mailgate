@@ -1,145 +1,125 @@
-name: Build release zip
+name: Build signed release ZIP
 
 on:
   push:
     tags:
+      # Stable tags [v]X.Y.Z[.W][-NN].
       - '[0-9]+.[0-9]+.[0-9]+*'
       - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 permissions:
   contents: write
 
-env:
-  PLUGIN_SLUG: sw-mailgate
-
 jobs:
   build:
-    name: Build release zip
+    name: Build signed release ZIP
     runs-on: ubuntu-latest
+    environment: plugin-releases
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Determine repository name and version
+      - name: Determine version
         id: metadata
-        env:
-          REPO_NAME: ${{ github.event.repository.name }}
         run: |
           RAW="${GITHUB_REF_NAME}"
-          VERSION="${RAW#v}"
-          VERSION="${VERSION%-*}"
-
-          echo "repo=$REPO_NAME" >> "$GITHUB_OUTPUT"
+          if ! printf '%s' "$RAW" | grep -Eq '^v?[0-9]+(\.[0-9]+){2,3}(-[0-9]{2})?$'; then
+            echo "Expected stable release tag [v]X.Y.Z[.W][-NN]" >&2
+            exit 1
+          fi
+          VERSION="${RAW#v}"        # strip leading "v"
+          VERSION="${VERSION%-*}"   # strip "-01" build suffix
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "zip=${REPO_NAME}-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches plugin version
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          HEADER="$(grep -m1 -E '^\s*\*?\s*Version:' sw-mailgate.php | awk '{print $NF}' | tr -d '\r')"
+          CONSTANT="$(grep -m1 "define( 'SW_MAILGATE_VERSION'" sw-mailgate.php | sed -E "s/.*'([0-9.]+)'.*/\1/")"
+          echo "tag=$VERSION header=$HEADER constant=$CONSTANT"
+          if [ "$VERSION" != "$HEADER" ] || [ "$VERSION" != "$CONSTANT" ]; then
+            echo "Tag, plugin header and SW_MAILGATE_VERSION must be identical" >&2
+            exit 1
+          fi
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
           php-version: '8.2'
+          extensions: zip, mbstring, fileinfo, openssl, mysqli, sodium
           tools: composer:v2
           coverage: none
 
       - name: Validate Composer configuration
         run: composer validate --strict
 
-      - name: Install production dependencies
-        run: |
-          composer install \
-            --no-dev \
-            --prefer-dist \
-            --no-interaction \
-            --no-progress \
-            --no-scripts \
-            --optimize-autoloader
-
-      - name: Smoke-test source checkout
-        run: |
-          php tests/bootstrap.php
-          php tests/uninstall.php . delete
-          php tests/uninstall.php . preserve
-          php tests/uninstall.php . default
-
-      - name: Isolate dependencies with Mozart
-        run: |
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "$GITHUB_WORKSPACE:/project" \
-            coenjacobs/mozart:1.2.3 \
-            /mozart/bin/mozart compose
-
-      - name: Verify Mozart output
-        run: test -f vendor-prefixed/autoload.php
-
-      - name: Bundle WordPress plugin
+      - name: Embed public verification key
         env:
-          REPO_NAME: ${{ steps.metadata.outputs.repo }}
-          VERSION: ${{ steps.metadata.outputs.version }}
-        run: |
-          STAGING="$RUNNER_TEMP/staging/$PLUGIN_SLUG"
+          SW_PLUGIN_RELEASE_SIGNING_KEY: ${{ secrets.SW_PLUGIN_RELEASE_SIGNING_KEY }}
+          SW_PLUGIN_RELEASE_KEY_ID: ${{ vars.SW_PLUGIN_RELEASE_KEY_ID }}
+        run: php bin/release-manifest.php public-key src/Update/Config/trusted-keys.php
 
-          mkdir -p "$STAGING"
-
-          # Ship only the isolated libraries, never Composer's original vendor tree.
-          rsync -a \
-            --exclude='/.git/' \
-            --exclude='/.github/' \
-            --exclude='/.gitignore' \
-            --exclude='/.editorconfig' \
-            --exclude='/.phpcs.cache' \
-            --exclude='/.phpstan.cache/' \
-            --exclude='/vendor/' \
-            --exclude='/tests/' \
-            --exclude='/coverage/' \
-            --exclude='/.scannerwork/' \
-            --exclude='/sonar-project.properties' \
-            --exclude='/node_modules/' \
-            --exclude='/.env*' \
-            --exclude='*.log' \
-            --exclude='*.zip' \
-            --exclude='/composer.json' \
-            --exclude='/composer.lock' \
-            --exclude='/package.json' \
-            --exclude='/package-lock.json' \
-            --exclude='/phpcs.xml*' \
-            --exclude='/phpstan.neon*' \
-            ./ "$STAGING/"
-
-          # Prove that the plugin boots without the original vendor directory.
-          php tests/bootstrap.php "$STAGING"
-
-          # Keep the installed plugin slug stable, even if the repository is renamed.
-          (
-            cd "$RUNNER_TEMP/staging"
-            zip -qr "$GITHUB_WORKSPACE/${REPO_NAME}-${VERSION}.zip" "$PLUGIN_SLUG"
-          )
+      - name: Build ZIPs
+        run: bash bin/build-zip.sh "$RUNNER_TEMP/dist"
 
       - name: Verify ZIP contents
         env:
-          ZIP_FILE: ${{ steps.metadata.outputs.zip }}
+          KEY_ID: ${{ vars.SW_PLUGIN_RELEASE_KEY_ID }}
         run: |
-          unzip -t "$ZIP_FILE"
-          unzip -Z1 "$ZIP_FILE" > "$RUNNER_TEMP/zip-contents.txt"
-          grep -Fx "$PLUGIN_SLUG/vendor-prefixed/autoload.php" "$RUNNER_TEMP/zip-contents.txt"
-          grep -Fx "$PLUGIN_SLUG/sw-mailgate.php" "$RUNNER_TEMP/zip-contents.txt"
-          if grep -Eq "^$PLUGIN_SLUG/(vendor|tests|\.git|\.github)/" "$RUNNER_TEMP/zip-contents.txt"; then
-            echo "Unexpected development or unprefixed vendor files in ZIP" >&2
-            exit 1
-          fi
+          shopt -s nullglob
+          ZIPS=("$RUNNER_TEMP"/dist/*.zip)
+          [ "${#ZIPS[@]}" -eq 1 ] || { echo "Expected exactly one ZIP" >&2; exit 1; }
+          for zip in "${ZIPS[@]}"; do
+            unzip -t "$zip" >/dev/null
+            unzip -Z1 "$zip" > "$RUNNER_TEMP/zip-contents.txt"
+            slug="$(head -1 "$RUNNER_TEMP/zip-contents.txt" | cut -d/ -f1)"
+            for path in sw-mailgate.php uninstall.php vendor-prefixed/autoload.php src/Update/Manifest.php src/Update/Package.php src/Update/Provider.php src/Update/Service.php src/Update/Store.php src/Update/Transport.php src/Update/Config/source.php src/Update/Config/descriptors.php src/Update/Config/trusted-keys.php assets/js/sw-mailgate-updates.js assets/admin.js; do
+              grep -Fx "sw-mailgate/$path" "$RUNNER_TEMP/zip-contents.txt"
+            done
+            if grep -Eq "^$slug/(vendor|node_modules|bin|tests|coverage|\.git|\.github|addons)/|\.backup([-/]|$)" "$RUNNER_TEMP/zip-contents.txt"; then
+              echo "Unexpected development files in $zip" >&2
+              exit 1
+            fi
+            echo "OK: $zip"
+          done
+          MAIN_ZIP="$RUNNER_TEMP/dist/sw-mailgate-${{ steps.metadata.outputs.version }}.zip"
+          [ -f "$MAIN_ZIP" ] || { echo "Main plugin ZIP missing" >&2; exit 1; }
+          unzip -p "$MAIN_ZIP" sw-mailgate/src/Update/Config/trusted-keys.php > "$RUNNER_TEMP/shipped-keys.php"
+          php -r '$expected = require $argv[1]; $shipped = require $argv[2]; $id = getenv("KEY_ID"); exit(isset($expected[$id], $shipped[$id]) && $expected[$id] === $shipped[$id] ? 0 : 1);' src/Update/Config/trusted-keys.php "$RUNNER_TEMP/shipped-keys.php"
 
-      - name: Smoke-test uninstall from release ZIP
+      - name: Upload packages to draft release
         env:
-          ZIP_FILE: ${{ steps.metadata.outputs.zip }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          EXTRACTED="$RUNNER_TEMP/uninstall-release"
-          unzip -q "$ZIP_FILE" -d "$EXTRACTED"
-          php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" delete
-          php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" preserve
-          php tests/uninstall.php "$EXTRACTED/$PLUGIN_SLUG" default
+          if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/existing-release.json" 2>/dev/null; then
+            php -r '$r=json_decode(file_get_contents($argv[1]),true); exit(empty($r["isDraft"])?1:0);' "$RUNNER_TEMP/existing-release.json" \
+              || { echo "Release $RELEASE_TAG is already published; refusing to modify it." >&2; exit 1; }
+          else
+            gh release create "$RELEASE_TAG" --draft --verify-tag --title "$RELEASE_TAG"
+          fi
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP"/dist/*.zip --clobber
+          # Resolve drafts via gh release view; the tag endpoint does not resolve them.
+          RELEASE_API_URL="$(gh release view "$RELEASE_TAG" --json apiUrl --jq .apiUrl)"
+          gh api "$RELEASE_API_URL" > "$RUNNER_TEMP/release.json"
 
-      - name: Create release and attach ZIP
-        uses: softprops/action-gh-release@v3
-        with:
-          name: ${{ steps.metadata.outputs.version }}
-          files: ${{ steps.metadata.outputs.zip }}
+      - name: Sign exact uploaded packages
+        env:
+          SW_PLUGIN_RELEASE_SIGNING_KEY: ${{ secrets.SW_PLUGIN_RELEASE_SIGNING_KEY }}
+          SW_PLUGIN_RELEASE_KEY_ID: ${{ vars.SW_PLUGIN_RELEASE_KEY_ID }}
+        run: php bin/release-manifest.php sign "$RUNNER_TEMP/release.json" "$RUNNER_TEMP/dist" "$GITHUB_SHA"
+
+      - name: Publish complete signed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/dist/sw-plugin-release.json" "$RUNNER_TEMP/dist/sw-plugin-release.json.sig" --clobber
+          mkdir -p "$RUNNER_TEMP/uploaded"
+          gh release download "$RELEASE_TAG" --dir "$RUNNER_TEMP/uploaded"
+          RELEASE_API_URL="$(gh release view "$RELEASE_TAG" --json apiUrl --jq .apiUrl)"
+          gh api "$RELEASE_API_URL" > "$RUNNER_TEMP/release-final.json"
+          php bin/verify-release.php "$RUNNER_TEMP/release-final.json" "$RUNNER_TEMP/uploaded"
+          gh release edit "$RELEASE_TAG" --draft=false

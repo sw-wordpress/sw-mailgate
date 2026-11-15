@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 define( 'WP_UNINSTALL_PLUGIN', true );
+require __DIR__ . '/update-stubs.php';
 $sw_mailgate_site = 7;
 $sw_mailgate_stack = array( 1 );
 $sw_mailgate_options = array();

@@ -126,6 +126,7 @@ final class Installer {
 	}
 
 	public static function deactivate(): void {
+		\SWMailgate\Update\Provider::deactivate();
 		wp_clear_scheduled_hook( Logger::CRON_HOOK );
 		wp_clear_scheduled_hook( Retry_Queue::CRON_HOOK );
 		wp_clear_scheduled_hook( \SWMailgate\Dns\Dns_Monitor::CRON_HOOK );
@@ -133,6 +134,7 @@ final class Installer {
 	}
 
 	public static function uninstall(): void {
+		\SWMailgate\Update\Provider::uninstall();
 		if ( ! is_multisite() ) {
 			self::uninstall_site();
 			return;

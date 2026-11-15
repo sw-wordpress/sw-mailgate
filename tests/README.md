@@ -61,8 +61,7 @@ The test SMTP server subprocesses are fixtures, outside the measured source scop
 
 CI collects coverage on PHP 8.2 with current WordPress and runs the full suite on
 the other PHP/WordPress combinations without instrumentation. Once all matrix
-jobs pass, the scanner imports the Clover artifact for master and same-repository
-pull requests. Relative source paths keep the report portable between jobs.
+jobs pass, the scanner imports the Clover artifact for same-repository pull requests. Relative source paths keep the report portable between jobs.
 Fork pull requests run the tests and produce the artifact without requiring secrets.
 
 One-time repository setup:
@@ -116,8 +115,7 @@ php tests/uninstall.php . default
 composer cs
 ```
 
-The release workflow runs the same entry points against the packaged plugin,
-including the prefixed autoloader.
+Die Paketprüfungen laufen auf Pull Requests; der Release-Workflow validiert und signiert ausschließlich Artefakte, ohne Testsuite.
 
 `integration.php` boots real WordPress and uses a **disposable MariaDB/MySQL
 database**. It creates WordPress tables with the `swmg_test_` prefix and deletes
@@ -279,12 +277,23 @@ hostname prevent any bearer credential from being sent.
 
 ## Dependency security
 
-Every push/PR fails on known advisories in shipped dependencies
+Every PR fails on known advisories in shipped dependencies
 (`composer audit --locked --no-dev`, `npm audit --omit=dev --audit-level=high`; npm is
 test tooling only today). `.github/workflows/security-audit.yml` audits all dependencies
 daily and keeps one open issue labelled `security-audit` (watchers are notified; updates
 only when findings change) and closes it once clean. `.github/dependabot.yml` opens weekly
 grouped update PRs (security fixes, routine updates per ecosystem; Composer majors
-individually). Dependabot PRs get no repository secrets, so SonarQube runs for them only
-after merging to master. Enable Dependabot alerts and security
+individually). Dependabot PRs get no repository secrets, so no SonarQube analysis runs for their PRs. Enable Dependabot alerts and security
 updates in the repository settings.
+
+## Verified manual GitHub updates
+
+`composer install --working-dir=tests/wp` installs a private WordPress and PHPUnit 9.6.
+`tests/run.php` runs both updater site modes sequentially with the existing mail scenarios and merges their coverage through the same prepend bootstrap (no source exclusions).
+The WP tests use `SWMG_TEST_DB_*` and `SWMG_WP_TEST_DB_NAME`; see the [local commands](../docs/GITHUB-UPDATES-BETRIEB.md#lokale-verifikation).
+Never configure this suite against a real WordPress or database. Native upgrades assert their destination is inside `tests/wp/vendor/` before touching files.
+
+`npm run coverage:js` combines the existing DOM tests and Chromium interactions; browser V8 coverage is merged into c8's whole-assets report.
+`php tests/release/verify-signed-build.php <zip-directory>` checks actual ZIP completeness, disposable signing, runtime verification, the release artifact validator and missing-secret rejection.
+`python3 tests/release/key-instructions.py` exercises all three documented Bash/Zsh blocks, mocking GitHub CLI; no actual secrets are sent.
+The release workflow never runs these suites. [Security contract and operator setup](../docs/GITHUB-UPDATES-BETRIEB.md).

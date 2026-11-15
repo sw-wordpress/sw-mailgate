@@ -5,9 +5,11 @@
   "license": "GPL-2.0-or-later",
   "scripts": {
     "test:js": "node --test tests/js/admin.test.js",
-    "coverage:js": "c8 --all --src assets --include \"assets/**/*.js\" --reporter text --reporter clover --reporter lcov --report-dir coverage/js node --test tests/js/admin.test.js && php tests/coverage/check.php coverage/js/clover.xml JavaScript"
+    "coverage:js": "c8 --all --src assets --include \"assets/**/*.js\" --reporter text --reporter clover --reporter lcov --report-dir coverage/js node tests/js/run.mjs && php tests/coverage/check.php coverage/js/clover.xml JavaScript",
+    "test:updates-ui": "node tests/browser/updates.mjs"
   },
   "devDependencies": {
-    "c8": "^12.0.0"
+    "c8": "^12.0.0",
+    "playwright-core": "^1.65.1"
   }
 }

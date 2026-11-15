@@ -1,8 +1,6 @@
 name: Tests
 
 on:
-  push:
-    branches: ['**']
   pull_request:
 
 permissions:
@@ -39,10 +37,11 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mysqli, sodium
+          extensions: mysqli, sodium, zip
           tools: composer:v2
           coverage: ${{ matrix.coverage && 'xdebug' || 'none' }}
       - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: composer install --working-dir=tests/wp --no-interaction --no-progress
       - run: composer validate --strict
       - run: composer cs
       - name: Audit shipped Composer dependencies for known vulnerabilities
@@ -71,6 +70,11 @@ jobs:
         env:
           WP_ROOT: /tmp/wordpress
           WP_DB_HOST: 127.0.0.1:3306
+          WP_DB_USER: root
+          SWMG_TEST_DB_USER: root
+          SWMG_TEST_DB_PASSWORD: ''
+          SWMG_TEST_DB_PORT: '3306'
+          SWMG_WP_TEST_DB_NAME: mailgate_test
           COLLECT_COVERAGE: ${{ matrix.coverage }}
           XDEBUG_MODE: coverage
         run: |
@@ -79,6 +83,13 @@ jobs:
           else
             php tests/run.php
           fi
+      - name: Install documentation test shell
+        run: sudo apt-get update -qq && sudo apt-get install -y zsh
+      - name: Build and verify signed release package with disposable key
+        run: |
+          bash bin/build-zip.sh /tmp/swmg-dist
+          php tests/release/verify-signed-build.php /tmp/swmg-dist
+          python3 tests/release/key-instructions.py
       - name: Upload Clover coverage
         if: matrix.coverage
         uses: actions/upload-artifact@v7
@@ -106,6 +117,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Audit shipped npm dependencies for known vulnerabilities
         run: npm audit --omit=dev --audit-level=high
+      - run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Run JavaScript tests and enforce line coverage > 80 %
         run: npm run coverage:js
       - name: Upload LCOV coverage
@@ -122,9 +134,7 @@ jobs:
     if: >-
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.user.login != 'dependabot[bot]') ||
-      (github.event_name == 'push' &&
-       github.ref_name == github.event.repository.default_branch)
+       github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
