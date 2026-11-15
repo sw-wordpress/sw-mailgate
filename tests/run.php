@@ -22,6 +22,8 @@ if ( $collect ) {
 
 $scenarios = array(
 	array( 'tests/coverage-check.php' ),
+	array( 'tests/update-context.php', 'cli' ),
+	array( 'tests/update-context.php', 'rest' ),
 	array( 'tests/bootstrap.php' ),
 	array( 'tests/uninstall.php', '.', 'delete' ),
 	array( 'tests/uninstall.php', '.', 'preserve' ),
@@ -56,6 +58,9 @@ foreach ( array( 'idle', 'short-true', 'short-false', 'send', 'foreign', 'smtp',
 	$scenarios[] = array( 'tests/lazy-loading.php', $mode );
 }
 
+$scenarios[] = array( 'tests/updates.php', 'single' );
+$scenarios[] = array( 'tests/updates.php', 'multisite' );
+
 $run = static function ( array $command ): void {
 	echo PHP_EOL . 'RUN: ' . implode( ' ', $command ) . PHP_EOL;
 	$process = proc_open( $command, array( STDIN, STDOUT, STDERR ), $pipes );
@@ -63,6 +68,8 @@ $run = static function ( array $command ): void {
 	$status = proc_close( $process );
 	if ( 0 !== $status ) { exit( $status > 0 ? $status : 1 ); }
 };
+
+$run( array( PHP_BINARY, '-n', '-d', 'disable_functions=sodium_crypto_sign_verify_detached', 'tests/update-context.php', 'support' ) );
 
 // Keep the extension-free regression intact. A second run can load the coverage
 // driver while still making mb_check_encoding unavailable.

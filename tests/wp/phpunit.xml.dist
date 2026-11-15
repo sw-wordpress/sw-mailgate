@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="bootstrap.php" colors="true" backupGlobals="false" convertDeprecationsToExceptions="false">
+ <testsuites><testsuite name="updates"><directory suffix="Test.php">tests</directory></testsuite></testsuites>
+ <coverage><include><directory suffix=".php">../../src</directory><directory suffix=".php">../../templates</directory><file>../../sw-mailgate.php</file><file>../../uninstall.php</file></include></coverage>
+</phpunit>

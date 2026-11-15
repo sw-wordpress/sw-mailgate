@@ -46,6 +46,7 @@ final class Plugin {
 	}
 
 	public function boot(): void {
+		\SWMailgate\Update\Provider::init();
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'plugins_loaded', array( Installer::class, 'maybe_upgrade' ) );
 

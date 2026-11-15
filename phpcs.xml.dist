@@ -37,7 +37,7 @@
     </rule>
     <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
         <properties>
-            <property name="prefixes" type="array"><element value="sw_mailgate"/><element value="SWMailgate"/><element value="SW_MAILGATE"/></property>
+            <property name="prefixes" type="array"><element value="sw_mailgate"/><element value="swmg"/><element value="SWMailgate"/><element value="SW_MAILGATE"/></property>
         </properties>
     </rule>
     <rule ref="PHPCompatibilityWP"/>

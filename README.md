@@ -180,3 +180,7 @@ Bundled third-party components:
 
 - [PHPMailer](https://github.com/PHPMailer/PHPMailer) `OAuthTokenProvider` interface (compatibility copy for older WordPress) — LGPL-2.1, license text in `compat/PHPMailer/LICENSE`
 - [Composer](https://getcomposer.org/) class loader (generated autoloader) — MIT, license text in `vendor-prefixed/composer/LICENSE` of the release build
+
+## Verifizierte GitHub-Updates
+
+Ausschließlich manuelle Installation über die WordPress-Pluginverwaltung. Einrichtung und Grenzen: [Betriebsanleitung](docs/GITHUB-UPDATES-BETRIEB.md). Ohne lokal verankerten öffentlichen Schlüssel bleibt die GitHub-Versorgung gesperrt.

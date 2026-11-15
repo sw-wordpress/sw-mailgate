@@ -7,3 +7,7 @@
 /coverage/
 /.scannerwork/
 /.phpstan.cache/
+
+/tests/wp/vendor/
+/dist/
+.phpunit.result.cache

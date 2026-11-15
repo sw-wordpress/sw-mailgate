@@ -15,3 +15,4 @@ define( 'SW_MAILGATE_URL', 'https://example.org/wp-content/plugins/sw-mailgate/'
 define( 'SW_MAILGATE_MIN_PHP', '8.2' );
 // Defined by wp-settings.php.
 define( 'WPINC', 'wp-includes' );
+define( 'DB_NAME', 'phpstan_test_database' );

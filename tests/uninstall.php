@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 define( 'WP_UNINSTALL_PLUGIN', true );
+require __DIR__ . '/update-stubs.php';
 
 $sw_mailgate_test_root = $argv[1] ?? dirname( __DIR__ );
 $sw_mailgate_test_mode = $argv[2] ?? 'delete';
