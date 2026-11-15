@@ -297,3 +297,7 @@ Never configure this suite against a real WordPress or database. Native upgrades
 `php tests/release/verify-signed-build.php <zip-directory>` checks actual ZIP completeness, disposable signing, runtime verification, the release artifact validator and missing-secret rejection.
 `python3 tests/release/key-instructions.py` exercises all three documented Bash/Zsh blocks, mocking GitHub CLI; no actual secrets are sent.
 The release workflow never runs these suites. [Security contract and operator setup](../docs/GITHUB-UPDATES-BETRIEB.md).
+
+`python3 tests/release/command.py` tests `make release` against disposable local Git
+remotes, including version validation, duplicate tags, clean checkout requirements
+and atomic push rejection. It never publishes a GitHub release.

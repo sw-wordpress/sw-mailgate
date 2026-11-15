@@ -90,6 +90,7 @@ jobs:
           bash bin/build-zip.sh /tmp/swmg-dist
           php tests/release/verify-signed-build.php /tmp/swmg-dist
           python3 tests/release/key-instructions.py
+          python3 tests/release/command.py
       - name: Upload Clover coverage
         if: matrix.coverage
         uses: actions/upload-artifact@v7
