@@ -169,8 +169,14 @@ XDEBUG_MODE=coverage WP_ROOT=/tmp/wordpress WP_DB_HOST=127.0.0.1:3306 php tests/
 ```
 
 Every change needs tests; line coverage must stay above 80 %. Single scenarios, database settings
-and SonarQube setup: [tests/README.md](tests/README.md). GitHub Actions run the suite on every push;
-pushing a version tag builds the release ZIP with [Mozart](https://github.com/coenjacobs/mozart).
+and SonarQube setup: [tests/README.md](tests/README.md). GitHub Actions run the suite on pull requests.
+
+`make release VERSION=1.2.3` updates the plugin header and version constant, commits
+the change, creates an annotated version tag and atomically pushes the current branch
+and tag to `origin`. It requires a clean checkout and an unused version (X.Y.Z or
+X.Y.Z.W); downgrades are rejected. The tag triggers the signed
+[release workflow](.github/workflows/main.yml). See the
+[operator setup](docs/GITHUB-UPDATES-BETRIEB.md) for signing keys and environment protection.
 
 ## License
 
