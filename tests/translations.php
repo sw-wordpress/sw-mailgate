@@ -3,6 +3,8 @@
 declare(strict_types=1);
 $root = dirname( __DIR__ );
 $wp = rtrim( getenv( 'WP_ROOT' ) ?: '/tmp/wordpress', '/' );
+// POMO uses WordPress's PHP compatibility functions on supported older PHP versions.
+require_once $wp . '/wp-includes/compat.php';
 require_once $wp . '/wp-includes/pomo/po.php';
 require_once $wp . '/wp-includes/pomo/mo.php';
 $pot = new PO();
