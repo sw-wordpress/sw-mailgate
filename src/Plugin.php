@@ -59,11 +59,16 @@ final class Plugin {
 		$this->redirector = new Redirector();
 		$webhooks         = new \SWMailgate\Tracking\Webhook_Controller( $connections, $providers );
 		add_action( 'rest_api_init', array( $webhooks, 'register' ) );
-		( new \SWMailgate\Dns\Dns_Monitor( $connections, $providers ) )->register();
+		$dns = new \SWMailgate\Dns\Dns_Monitor( $connections, $providers );
+		$dns->register();
+		add_filter( 'site_status_tests', array( new \SWMailgate\Admin\Health_Checks( $connections, $providers, $secrets ), 'register' ) );
 		add_action( 'init', array( \SWMailgate\Tracking\Event_Repository::class, 'schedule' ) );
 		add_action( \SWMailgate\Tracking\Event_Repository::CRON_HOOK, array( new \SWMailgate\Tracking\Event_Repository(), 'reconcile_pending' ) );
 		add_action( Logger::CRON_HOOK, array( \SWMailgate\Tracking\Event_Repository::class, 'retain' ), 20 );
 		$logs = new Log_Repository();
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::add_command( 'mailgate', new \SWMailgate\Cli\Commands( $connections, $dns, $logs, $this->dispatcher ) );
+		}
 		( new Logger( $logs ) )->register();
 		( new Privacy( $logs, $queue ) )->register();
 		add_action( 'init', array( Logger::class, 'schedule' ) );
@@ -77,6 +82,7 @@ final class Plugin {
 		add_filter( 'wp_mail_from', array( $this->dispatcher, 'filter_from' ), PHP_INT_MAX );
 
 		if ( is_admin() ) {
+			add_action( 'admin_notices', array( new \SWMailgate\Admin\Mailer_Conflict(), 'notice' ) );
 			( new \SWMailgate\Admin\Webhook_Admin( $connections, $providers ) )->register();
 			( new OAuth_Admin( $connections ) )->register();
 			( new Admin_Page( $connections, $providers, $secrets, $this->dispatcher, $this->redirector, $breaker ) )->register();
@@ -86,6 +92,9 @@ final class Plugin {
 
 	public function load_textdomain(): void {
 		load_plugin_textdomain( 'sw-mailgate', false, dirname( plugin_basename( SW_MAILGATE_FILE ) ) . '/languages' );
+		if ( 'de_DE_formal' === determine_locale() ) {
+			load_textdomain( 'sw-mailgate', SW_MAILGATE_DIR . 'languages/sw-mailgate-de_DE.mo', 'de_DE_formal' );
+		}
 	}
 
 	/**

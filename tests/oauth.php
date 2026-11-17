@@ -141,6 +141,12 @@ $connection = $connections->find( 'google' );
 
 $before = $token_count;
 sw_mailgate_check( is_string( $client->access_token( $connection ) ) && $before === $token_count, 'Unexpired cached access tokens need no HTTP request.' );
+$health = new \SWMailgate\Admin\Health_Checks( $connections, new Provider_Registry( array( $google, $office ) ), $secrets );
+sw_mailgate_check( 'good' === $health->oauth()['status'], 'Site Health accepts a real delegated grant without refreshing it.' );
+$health_tokens = $secrets->get( Connection::secret_name( $connection->id(), 'oauth_tokens' ) );
+sw_mailgate_oauth_expire( $connection->id() );
+sw_mailgate_check( 'good' === $health->oauth()['status'] && $before === $token_count, 'Site Health accepts renewable expired tokens without network access.' );
+$secrets->set( Connection::secret_name( $connection->id(), 'oauth_tokens' ), $health_tokens );
 sw_mailgate_oauth_expire( 'google' );
 $busy = null;
 $on_token = static function () use ( &$busy, $client, $connection ): void { $busy = $client->access_token( $connection, true ); };

@@ -29,7 +29,7 @@ redirection show and control where mail goes.
 
 ## Languages
 
-English.
+English and German (`de_DE`, also used for `de_DE_formal`).
 
 ## Usage
 
@@ -38,6 +38,34 @@ English.
 3. In the saved connection, click **Test connection (no mail is sent)**, then **Send test mail** to check real delivery.
 4. Optional: add more connections and order them with ↑/↓; later ones are fallbacks.
 5. On staging sites, enter a test inbox under **Mailgate → Settings → Redirect mail to** and click **Save Changes**.
+
+## Diagnostics and WP-CLI
+
+The dashboard shows retained delivery totals, bounce statistics and waiting retries.
+Under **Tools → Site Health**, Mailgate probes every enabled connection without
+sending mail, checks local delegated OAuth grants and checks sender DNS. A successful
+probe cannot confirm delivery or Send As permissions. No enabled connections produces
+a recommendation because WordPress then uses its native transport. The OAuth check
+accepts expired access tokens with a refresh grant; revocation and application
+credentials are checked by the connection probe.
+
+```sh
+wp mailgate connections --format=json
+wp mailgate test recipient@example.com --connection=primary
+wp mailgate log --limit=50 --status=failed --connection=primary --format=csv
+wp mailgate dns --connection=primary --refresh --format=json
+```
+
+`test` sends mail and keeps redirection active. Without `--connection` it uses the
+normal failover and retry rules; queued outcomes are reported explicitly. A selected
+connection must be enabled. `log` shows attempts without recipients, subjects, bodies
+or raw errors; `connections` omits credentials/settings. DNS defaults to enabled
+connections, supports selecting a disabled connection, and respects the existing DoH
+opt-in. List commands support `table`, `json` and `csv`; log limits are 1–500.
+
+A backend notice warns administrators about known active mailer plugins (including
+network activation) or a replaced global mailer. Disable competing mailer plugins;
+later replacements at the same final hook priority cannot be prevented universally.
 
 ## Configuration
 

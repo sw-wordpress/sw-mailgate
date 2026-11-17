@@ -3,6 +3,16 @@
 Overview: [README](../README.md#integrations). Step-by-step OAuth setup (German):
 [oauth-einrichtung.md](oauth-einrichtung.md). Failover and retries: [delivery.md](delivery.md).
 
+## SMTP
+
+Add an **SMTP** connection, enter the provider's host, port, encryption and login
+credentials, and choose an allowed From address. Keep TLS certificate verification
+enabled; **Certificate host name** can specify the certificate name when connecting
+to an IP address or alias. The connection test connects and authenticates without
+submitting mail; send a test mail afterwards to verify sender permissions and delivery.
+Passwords are encrypted and can be overridden through [wp-config](configuration.md#wp-config-overrides-in-the-editor).
+For OAuth authentication, use the dedicated [XOAUTH2 providers](#smtp-with-xoauth2).
+
 ## Send through Mailgun
 
 Add a **Mailgun** connection under **Mailgate → Connections**. Enter the Mailgun

@@ -33,6 +33,12 @@ use SWMailgate\Routing\Failover_Settings;
 use SWMailgate\Routing\Retry_Queue;
 use SWMailgate\Security\Secret_Store;
 
+if ( 'm9' === ( $argv[2] ?? '' ) ) {
+	define( 'WP_CLI', true );
+	define( 'WP_PLUGIN_DIR', dirname( getenv( 'SW_MAILGATE_TEST_PLUGIN' ) ?: dirname( __DIR__ ) ) );
+	require __DIR__ . '/cli-fixture.php';
+}
+
 $issue_mode = ( $argv[2] ?? '' ) === 'issues' ? ( $argv[3] ?? 'smtp' ) : null;
 if ( in_array( $issue_mode, array( 'editor', 'editor-false' ), true ) ) {
 	define( 'SW_MAILGATE_PRIMARY_HOST', 'effective.example.test' );
@@ -212,7 +218,7 @@ $provider = new class() implements Provider {
 add_filter( 'sw_mailgate_providers', static fn( array $providers ): array => array_merge( $providers, array( $provider ) ) );
 \SWMailgate\Plugin::instance()->install_mailer();
 $headers = array( 'Cc: cc@example.test', 'Bcc: bcc@example.test', 'Reply-To: reply@example.test', 'Content-Type: text/html; charset=UTF-8' );
-if ( in_array( $argv[2] ?? '', array( 'tracking', 'dns' ), true ) ) {
+if ( in_array( $argv[2] ?? '', array( 'tracking', 'dns', 'm9' ), true ) ) {
 	include __DIR__ . '/' . $argv[2] . '.php';
 	$sw_mailgate_test_complete = true;
 	exit;

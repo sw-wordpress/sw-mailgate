@@ -301,3 +301,13 @@ The release workflow never runs these suites. [Security contract and operator se
 `python3 tests/release/command.py` tests `make release` against disposable local Git
 remotes, including version validation, duplicate tags, clean checkout requirements
 and atomic push rejection. It never publishes a GitHub release.
+
+## M9 acceptance
+
+`php tests/integration.php enabled m9` covers Site Health, WP-CLI command registration,
+filters/limits/safe output and failures, competing site/network mailers, access control
+and German/formal catalog loading. `translations.php` checks every POT entry against
+PO/MO, interpolation placeholders and plurals. OAuth scenarios additionally check
+healthy and renewable expired grants. All are included in `tests/run.php`.
+The active CI/release workflows are in `.github/workflows/`; the release workflow
+builds the allowlisted ZIP with `vendor-prefixed` and signs it after upload.
