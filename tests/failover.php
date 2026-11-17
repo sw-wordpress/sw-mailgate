@@ -145,6 +145,21 @@ $admin->render_connections();
 $html = ob_get_clean();
 sw_mailgate_check( str_contains( $html, 'Paused until' ) && str_contains( $html, 'value="reset"' ) && str_contains( $html, '2 failures in a row' ), 'Connection list shows the pause and a reset action.' );
 
+$footer_text = 'Open source by Stefan Warnat – free to use, free to change, better together.';
+$document    = new DOMDocument();
+@$document->loadHTML( '<?xml encoding="UTF-8">' . $html );
+$xpath       = new DOMXPath( $document );
+$footer      = $xpath->query( '//div[contains(concat(" ", normalize-space(@class), " "), " wrap ")]/p[contains(concat(" ", normalize-space(@class), " "), " swmg-footer ")][not(following-sibling::*)]' );
+sw_mailgate_check( 1 === $footer->length && $footer_text === $footer->item( 0 )->textContent && 1 === substr_count( $html, $footer_text ), 'The author line appears once at the end of the plugin dashboard content.' );
+$footer_locale = determine_locale();
+sw_mailgate_check( load_textdomain( 'sw-mailgate', SW_MAILGATE_DIR . 'languages/sw-mailgate-de_DE.mo', 'de_DE' ), 'The compiled German catalog loads in WordPress.' );
+ob_start();
+$admin->render_connections();
+$german_html = ob_get_clean();
+sw_mailgate_check( str_contains( $german_html, 'Open Source von Stefan Warnat – frei nutzbar, frei veränderbar, gemeinsam besser.' ) && ! str_contains( $german_html, $footer_text ), 'The dashboard renders the exact German author line from the MO catalog.' );
+unload_textdomain( 'sw-mailgate', true );
+WP_Translation_Controller::get_instance()->set_locale( $footer_locale );
+
 // Half-open: after the cooldown one more failure pauses again without a second down event.
 sw_mailgate_expire_pause( 'alpha' );
 sw_mailgate_check( ! $breaker->is_open( 'alpha' ) && $breaker->is_failing( 'alpha' ), 'After the cooldown the connection is failing but no longer skipped.' );

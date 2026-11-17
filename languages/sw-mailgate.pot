@@ -1,0 +1,13 @@
+# Translation template for SW Mailgate.
+msgid ""
+msgstr ""
+"Project-Id-Version: SW Mailgate\n"
+"Report-Msgid-Bugs-To: https://github.com/sw-wordpress/sw-mailgate/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Domain: sw-mailgate\n"
+
+#: templates/admin/connections.php:173
+msgid "Open source by Stefan Warnat – free to use, free to change, better together."
+msgstr ""

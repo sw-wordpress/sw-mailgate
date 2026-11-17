@@ -170,4 +170,5 @@ $action_button = static function ( string $id, string $action, string $label, st
 			</p>
 		</div>
 	<?php endif; ?>
+	<p class="description swmg-footer"><?php esc_html_e( 'Open source by Stefan Warnat – free to use, free to change, better together.', 'sw-mailgate' ); ?></p>
 </div>
