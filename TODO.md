@@ -26,8 +26,8 @@ Legend: `[x]` done · `[ ]` open · **(M)** milestone release
 ## Next steps (short term)
 
 - [x] Integration tests in `tests/` against WordPress + MariaDB, run by CI (see `tests/README.md`)
-- [ ] Detect other mailer plugins (e.g. WP Mail SMTP) that also replace `$phpmailer` and show an admin notice
-- [ ] German translation (`languages/sw-mailgate-de_DE.po/.mo`); load `de_DE.mo` explicitly for `de_DE_formal` (WP 7.1 just-in-time loading does not fall back)
+- [x] Detect other mailer plugins (e.g. WP Mail SMTP) that also replace `$phpmailer` and show an admin notice
+- [x] German translation (`languages/sw-mailgate-de_DE.po/.mo`); load `de_DE.mo` explicitly for `de_DE_formal` (WP 7.1 just-in-time loading does not fall back)
 - [x] Settings page: "delete data on uninstall" (`sw_mailgate_delete_data`)
 - [x] Verify the Mozart loader path in release builds (`vendor-prefixed/autoload.php` + `addPsr4`)
 
@@ -135,11 +135,11 @@ limits are documented in `README.md`; deterministic scenarios are in `tests/READ
 
 ## M9 – 1.0 release
 
-- [ ] Dashboard widget, Site Health tests (connection, OAuth token, DNS)
-- [ ] WP-CLI: `wp mailgate test|log|dns|connections`
-- [ ] Complete translations, readme, user documentation (wp-config constants, provider setup)
-- [ ] PHPUnit unit + integration tests, phpstan, CI (`workflows/main.yml`)
-- [ ] Release ZIP with `vendor-prefixed`, without dev files
+- [x] Dashboard widget, Site Health tests (connection, OAuth token, DNS)
+- [x] WP-CLI: `wp mailgate test|log|dns|connections`
+- [x] Complete translations, readme, user documentation (wp-config constants, provider setup)
+- [x] PHPUnit unit + integration tests, phpstan, CI (`.github/workflows/tests.yml`)
+- [x] Release ZIP with `vendor-prefixed`, without dev files
 
 ---
 

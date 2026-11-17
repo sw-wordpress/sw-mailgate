@@ -1,13 +1,2076 @@
-# Translation template for SW Mailgate.
+# Copyright (C) 2026 Stefan Warnat
+# This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: SW Mailgate\n"
-"Report-Msgid-Bugs-To: https://github.com/sw-wordpress/sw-mailgate/issues\n"
+"Project-Id-Version: SW Mailgate 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/sw-mailgate\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-17T19:10:30+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: sw-mailgate\n"
+
+#. Plugin Name of the plugin
+#: sw-mailgate.php
+msgid "SW Mailgate"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: sw-mailgate.php
+msgid "https://stefanwarnat.de"
+msgstr ""
+
+#. Description of the plugin
+#: sw-mailgate.php
+msgid "Send WordPress mail through SMTP, Mailgun, Google or Microsoft 365 with failover, redirection, logging and DNS checks."
+msgstr ""
+
+#. Author of the plugin
+#: sw-mailgate.php
+msgid "Stefan Warnat"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:59
+#: src/Admin/Admin_Page.php:60
+msgid "Mailgate"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:69
+#: src/Admin/Admin_Page.php:70
+msgid "Connections"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:77
+#: templates/admin/connection-edit.php:192
+#: templates/admin/test.php:18
+#: templates/admin/test.php:54
+msgid "Send test mail"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:78
+#: src/Admin/Admin_Page.php:392
+msgid "Test mail"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:99
+msgid "SW Mailgate: stored credentials cannot be decrypted because the encryption key changed (SW_MAILGATE_KEY or the WordPress salts). Please enter the passwords and API keys of your connections again."
+msgstr ""
+
+#. translators: 1: connection label, 2: number of failures, 3: time
+#: src/Admin/Admin_Page.php:120
+#, php-format
+msgid "SW Mailgate: the connection \"%1$s\" failed %2$d times in a row and is skipped until %3$s."
+msgstr ""
+
+#. translators: 1: connection label, 2: number of failures
+#: src/Admin/Admin_Page.php:122
+#, php-format
+msgid "SW Mailgate: the connection \"%1$s\" failed %2$d times in a row. The next mail tries it again."
+msgstr ""
+
+#. translators: %s: error message
+#: src/Admin/Admin_Page.php:125
+#: src/Routing/Failure_Alert.php:48
+#: src/Routing/Failure_Alert.php:75
+#: src/Update/Provider.php:253
+#, php-format
+msgid "Last error: %s"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:127
+msgid "Check connections"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:328
+msgid "Connection test"
+msgstr ""
+
+#. translators: %s: site name
+#: src/Admin/Admin_Page.php:365
+#, php-format
+msgid "[%s] SW Mailgate test mail"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:383
+msgid "PHP mail() (WordPress default)"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:400
+msgid "This is a test mail sent by SW Mailgate. If you can read it, the connection works."
+msgstr ""
+
+#. translators: %s: site URL
+#: src/Admin/Admin_Page.php:402
+#: src/Routing/Failure_Alert.php:114
+#, php-format
+msgid "Site: %s"
+msgstr ""
+
+#. translators: %s: date and time
+#: src/Admin/Admin_Page.php:404
+#, php-format
+msgid "Time: %s"
+msgstr ""
+
+#: src/Admin/Admin_Page.php:463
+msgid "Connection saved."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:464
+msgid "Connection deleted."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:465
+msgid "Failover order changed."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:466
+msgid "Connection enabled."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:467
+msgid "Connection disabled."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:468
+msgid "Failure counter reset. The connection is used again."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:469
+msgid "The connection does not exist."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:470
+msgid "Unknown provider."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:471
+msgid "Please enter a valid recipient address."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:472
+msgid "The test mail was sent."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:473
+msgid "The test mail could not be sent."
+msgstr ""
+
+#: src/Admin/Admin_Page.php:489
+#: src/Admin/Log_Page.php:52
+#: src/Admin/Webhook_Admin.php:27
+#: src/Dns/Dns_Monitor.php:155
+msgid "You do not have permission to do this."
+msgstr ""
+
+#: src/Admin/Health_Checks.php:25
+#: src/Admin/Health_Checks.php:55
+msgid "Mailgate OAuth authorization"
+msgstr ""
+
+#: src/Admin/Health_Checks.php:25
+#: src/Admin/Health_Checks.php:43
+msgid "Mailgate connections"
+msgstr ""
+
+#: src/Admin/Health_Checks.php:43
+msgid "Enabled connections are probed without sending mail. No enabled connection means WordPress uses its native transport. Send a test mail to verify sender permissions and delivery."
+msgstr ""
+
+#: src/Admin/Health_Checks.php:55
+msgid "Checks local delegated grants for a valid access token or renewable authorization. Provider revocation is detected by the connection probe. Application credentials are checked there too."
+msgstr ""
+
+#: src/Admin/Health_Checks.php:68
+msgid "Review connections"
+msgstr ""
+
+#: src/Admin/Log_Page.php:46
+#: src/Logging/Privacy.php:69
+#: templates/admin/log.php:16
+msgid "Mail log"
+msgstr ""
+
+#: src/Admin/Log_Page.php:47
+#: templates/admin/settings.php:18
+msgid "Mailgate settings"
+msgstr ""
+
+#: src/Admin/Log_Page.php:47
+msgid "Settings"
+msgstr ""
+
+#: src/Admin/Log_Page.php:79
+msgid "Log entry not found."
+msgstr ""
+
+#: src/Admin/Log_Page.php:112
+msgid "Invalid redirection settings."
+msgstr ""
+
+#: src/Admin/Log_Page.php:165
+msgid "SW Mailgate: the redirection address is invalid. Mail sending is blocked until the configuration is corrected."
+msgstr ""
+
+#: src/Admin/Log_Page.php:167
+msgid "SW Mailgate: this is a non-production site and mail redirection is disabled. Emails will reach their real recipients."
+msgstr ""
+
+#: src/Admin/Log_Page.php:186
+msgid "The export could not be started."
+msgstr ""
+
+#: src/Admin/Log_Page.php:236
+msgid "This message cannot be resent. Stored content and an active connection are required; attachments are not retained."
+msgstr ""
+
+#: src/Admin/Log_Page.php:268
+msgid "Mailgate delivery"
+msgstr ""
+
+#: src/Admin/Log_Page.php:274
+msgid "Final outcomes per message. Only retained log entries are counted."
+msgstr ""
+
+#. translators: 1: days, 2: sent messages, 3: failed messages
+#: src/Admin/Log_Page.php:281
+#, php-format
+msgid "Last %1$d days: %2$d sent, %3$d failed."
+msgstr ""
+
+#. translators: 1: delivered count, 2: bounced count, 3: complaint count, 4: message bounce percentage
+#: src/Admin/Log_Page.php:286
+#, php-format
+msgid "%1$d delivered, %2$d bounced, %3$d complained. Message bounce rate: %4$s%% of accepted messages (tracking may be incomplete)."
+msgstr ""
+
+#. translators: 1: partially delivered messages, 2: messages with uncertain delivery
+#: src/Admin/Log_Page.php:289
+#, php-format
+msgid "%1$d partial deliveries, %2$d uncertain deliveries. Check outcomes before retrying."
+msgstr ""
+
+#. translators: %d: number of messages
+#: src/Admin/Log_Page.php:295
+#, php-format
+msgid "%d message is waiting in the retry queue."
+msgid_plural "%d messages are waiting in the retry queue."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/Log_Page.php:297
+msgid "View mail log"
+msgstr ""
+
+#: src/Admin/Log_Table.php:35
+#: templates/admin/log-detail.php:30
+msgid "Time (UTC)"
+msgstr ""
+
+#: src/Admin/Log_Table.php:36
+#: templates/admin/connection-edit.php:83
+#: templates/admin/connections.php:56
+#: templates/admin/dns.php:26
+#: templates/admin/log.php:20
+msgid "Status"
+msgstr ""
+
+#: src/Admin/Log_Table.php:37
+#: templates/admin/connections.php:53
+#: templates/admin/log.php:39
+#: templates/admin/messages.php:30
+msgid "Connection"
+msgstr ""
+
+#: src/Admin/Log_Table.php:38
+#: templates/admin/log-detail.php:33
+#: templates/admin/settings.php:115
+msgid "Recipients"
+msgstr ""
+
+#: src/Admin/Log_Table.php:39
+#: templates/admin/settings.php:114
+msgid "Subject"
+msgstr ""
+
+#: src/Admin/Log_Table.php:40
+#: templates/admin/log-detail.php:37
+msgid "Duration (s)"
+msgstr ""
+
+#: src/Admin/Log_Table.php:66
+#: templates/admin/settings.php:125
+msgid "(no subject)"
+msgstr ""
+
+#: src/Admin/Log_Table.php:75
+#: templates/admin/log.php:29
+msgid "Delivered"
+msgstr ""
+
+#: src/Admin/Log_Table.php:76
+#: templates/admin/log.php:30
+msgid "Bounced"
+msgstr ""
+
+#: src/Admin/Log_Table.php:77
+#: templates/admin/log.php:31
+msgid "Complained"
+msgstr ""
+
+#: src/Admin/Log_Table.php:78
+#: templates/admin/log.php:23
+msgid "Sent"
+msgstr ""
+
+#: src/Admin/Log_Table.php:79
+#: templates/admin/log.php:24
+msgid "Redirected"
+msgstr ""
+
+#: src/Admin/Log_Table.php:80
+#: templates/admin/log.php:25
+msgid "Partial delivery"
+msgstr ""
+
+#: src/Admin/Log_Table.php:81
+#: templates/admin/log.php:26
+msgid "Delivery uncertain"
+msgstr ""
+
+#: src/Admin/Log_Table.php:82
+#: templates/admin/log.php:36
+msgid "Queued for retry"
+msgstr ""
+
+#: src/Admin/Log_Table.php:83
+#: templates/admin/log.php:37
+#: templates/admin/messages.php:45
+msgid "Failed"
+msgstr ""
+
+#: src/Admin/Mailer_Conflict.php:27
+msgid "SW Mailgate detected another mailer plugin or a replaced mailer. Disable competing mailer plugins to avoid conflicting transport settings and unreliable delivery."
+msgstr ""
+
+#: src/Admin/OAuth_Admin.php:34
+msgid "You do not have permission to manage OAuth connections."
+msgstr ""
+
+#: src/Admin/OAuth_Admin.php:64
+msgid "Local OAuth credentials were removed. To revoke the app grant, also remove its access in your Google or Microsoft account."
+msgstr ""
+
+#: src/Admin/OAuth_Admin.php:84
+msgid "OAuth mailbox connected. You can now send a test mail."
+msgstr ""
+
+#: src/Admin/Webhook_Admin.php:23
+#: src/Admin/Webhook_Admin.php:37
+msgid "Register webhooks"
+msgstr ""
+
+#: src/Admin/Webhook_Admin.php:34
+msgid "This connection does not support webhooks."
+msgstr ""
+
+#: src/Admin/Webhook_Admin.php:37
+msgid "Webhooks registered."
+msgstr ""
+
+#: src/Admin/Webhook_Admin.php:44
+msgid "Back to connection"
+msgstr ""
+
+#: src/Cli/Commands.php:135
+msgid "SW Mailgate test mail"
+msgstr ""
+
+#: src/Cli/Commands.php:135
+msgid "This is a test message from SW Mailgate."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:37
+msgid "Configure a sender address. Dynamic senders must be checked separately."
+msgstr ""
+
+#. translators: %d: DNS lookup count
+#: src/Dns/Dns_Checker.php:53
+#, php-format
+msgid "Publish exactly one SPF record, authorize this provider, avoid +all/?all and keep recursive DNS lookups at most 10 (observed: %d). DNS errors and macros require manual review."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:73
+msgid "Publish the active selector and a non-empty public key; compare with your provider."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:75
+msgid "Enter the active DKIM selector. Microsoft 365 selectors and SMTP signing settings depend on the tenant/provider."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:98
+msgid "Use one DMARC record with an explicit policy and aggregate reporting address. For subdomains, also review inherited organizational-domain policy manually."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:103
+msgid "Compare actual DKIM d= and envelope Return-Path in a received test mail for every fallback sender. Explicit signing or envelope domain matches indicate configured alignment; relaxed organizational-domain alignment needs manual review."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:112
+msgid "Publish the expected record supplied by Mailgun."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:116
+msgid "MX is optional for sending; verify that replies and bounces can be received."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:123
+msgid "Optional IPv4 forward-confirmed reverse DNS of the SMTP host; this may differ from the provider’s outbound delivery IP."
+msgstr ""
+
+#: src/Dns/Dns_Checker.php:126
+msgid "The sender may be changed by another plugin. Check all actual From domains."
+msgstr ""
+
+#: src/Dns/Dns_Monitor.php:42
+#: templates/admin/dns.php:16
+msgid "DNS checks"
+msgstr ""
+
+#: src/Dns/Dns_Monitor.php:117
+msgid "SW Mailgate: DNS results have worsened. Review sender authentication."
+msgstr ""
+
+#: src/Dns/Dns_Monitor.php:127
+#: src/Dns/Dns_Monitor.php:141
+msgid "Mailgate sender DNS"
+msgstr ""
+
+#: src/Dns/Dns_Monitor.php:147
+msgid "Checks configured sender domains. Confirm authentication and fallback alignment in a received test mail."
+msgstr ""
+
+#: src/Dns/Dns_Monitor.php:148
+msgid "Review DNS checks"
+msgstr ""
+
+#: src/Logging/Privacy.php:30
+#: src/Logging/Privacy.php:42
+msgid "SW Mailgate mail log"
+msgstr ""
+
+#: src/Logging/Privacy.php:64
+msgid "Email address"
+msgstr ""
+
+#: src/Logging/Privacy.php:98
+msgid "Some mail log entries could not be deleted. Please retry."
+msgstr ""
+
+#. translators: %s: provider ID
+#: src/Mail/Dispatcher.php:178
+#, php-format
+msgid "Unknown provider \"%s\"."
+msgstr ""
+
+#: src/Mail/Dispatcher.php:216
+msgid "No enabled mail connection is available."
+msgstr ""
+
+#: src/Mail/Dispatcher.php:310
+msgid "The provider did not answer after the message was sent, so it may have been accepted. Automatic failover was stopped to avoid duplicates."
+msgstr ""
+
+#. translators: %s: email address
+#: src/Mail/Dispatcher.php:331
+#, php-format
+msgid "The sender address \"%s\" of this connection is invalid."
+msgstr ""
+
+#: src/Mail/Redirection_Settings.php:37
+msgid "Enter one valid redirection address, or leave it empty to disable redirection."
+msgstr ""
+
+#: src/Mail/Redirection_Settings.php:44
+msgid "The allowlist accepts exact email addresses or domains, without wildcards."
+msgstr ""
+
+#: src/Mail/Redirector.php:39
+msgid "Mail redirection is misconfigured. Sending was blocked."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:67
+msgid "Save a valid OAuth client ID and client secret first."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:71
+msgid "SMTP OAuth requires a valid mailbox login address and delegated authorization. Application access is available through the Microsoft Graph provider."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:75
+msgid "Microsoft 365 requires a directory (tenant) UUID and a valid authorization mode."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:78
+msgid "Enter the Microsoft 365 mailbox address for application access."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:147
+msgid "Application mode uses client credentials; no browser authorization is needed."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:159
+msgid "OAuth authorization could not be started. Try again."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:183
+msgid "OAuth authorization expired or did not match this signed-in session. Start again from the connection editor."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:215
+msgid "Authorization was cancelled or the provider did not return a valid code."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:245
+msgid "Another request is renewing OAuth credentials. Retry connecting this mailbox shortly."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:250
+msgid "This authorization was superseded or expired. Start again from the connection editor."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:283
+msgid "Connect this mailbox in the connection editor before sending."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:287
+msgid "Another request is renewing this OAuth token. Try again shortly."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:298
+msgid "Reconnect this mailbox before sending."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:345
+msgid "OAuth token request failed. Check client credentials, consent and secret expiry; reconnect the mailbox if access was revoked."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:356
+msgid "The provider returned incomplete OAuth credentials. Reconnect and allow offline access."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:362
+msgid "The required mail sending permission was not granted. Reconnect and approve it."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:366
+msgid "The connection changed during authorization. Start again from its editor."
+msgstr ""
+
+#: src/OAuth/OAuth_Client.php:386
+msgid "OAuth credentials could not be stored. Check the WordPress database and encryption key."
+msgstr ""
+
+#: src/Providers/Field.php:47
+msgid "DNS: DKIM selector"
+msgstr ""
+
+#: src/Providers/Field.php:47
+msgid "Active selector from your provider (e.g. google or selector1). Mailgun expected records are retrieved automatically."
+msgstr ""
+
+#: src/Providers/Field.php:48
+msgid "DNS: DKIM signing domain"
+msgstr ""
+
+#: src/Providers/Field.php:48
+msgid "Actual DKIM d= domain; empty uses the provider default. Verify in a received mail."
+msgstr ""
+
+#: src/Providers/Field.php:49
+msgid "DNS: Return-Path domain"
+msgstr ""
+
+#: src/Providers/Field.php:49
+msgid "Actual envelope sender domain from a received test mail."
+msgstr ""
+
+#: src/Providers/Field.php:50
+msgid "DNS: provider SPF include"
+msgstr ""
+
+#: src/Providers/Field.php:50
+msgid "For generic SMTP, enter the include domain supplied by your provider."
+msgstr ""
+
+#: src/Providers/Field.php:51
+msgid "DNS: optional MX and SMTP PTR checks"
+msgstr ""
+
+#: src/Providers/Google_Provider.php:22
+msgid "Google / Gmail"
+msgstr ""
+
+#: src/Providers/Google_Provider.php:31
+msgid "The MIME message exceeds the Gmail API limit of 35 MB."
+msgstr ""
+
+#: src/Providers/Google_Provider.php:46
+msgid "Gmail returned success without a valid message ID. Automatic failover was stopped to avoid duplicates."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:27
+msgid "Mailgun"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:32
+msgid "Sending domain"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:32
+msgid "The domain configured in Mailgun, e.g. mg.example.com. Enter the domain, not an API URL."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:35
+msgid "Region"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:40
+msgid "US"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:41
+msgid "EU"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:43
+msgid "Select the region where this Mailgun domain was created."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:46
+msgid "HTTP webhook signing key"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:46
+msgid "Account-wide key from Mailgun > API Security. This is separate from the API key."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:47
+msgid "API key"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:47
+msgid "Use a Mailgun API key, not an SMTP password. The connection test also requires permission to read domain details; a sending-only key may not allow that test."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:48
+#: src/Providers/OAuth_Provider.php:37
+#: src/Providers/Smtp_Provider.php:71
+msgid "Timeout (seconds)"
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:48
+msgid "HTTP timeout, between 5 and 60 seconds."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:74
+msgid "Mailgun: the MIME request could not be prepared."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:82
+msgid "Mailgun returned a successful HTTP response without a valid message ID. Delivery is uncertain; automatic failover was stopped."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:99
+msgid "Mailgun returned invalid domain details. Check the sending domain and region."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:102
+msgid "The Mailgun domain is not active. Check domain verification and account status."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:113
+msgid "HTTPS and a webhook signing key are required."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:124
+msgid "A webhook already exists or could not be read. Add this URL in Mailgun without replacing existing endpoints. Earlier event types may already be registered."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:189
+msgid "Mailgun DNS requirements could not be read. Check API permissions and retry."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:215
+msgid "Enter a valid Mailgun sending domain without a scheme, path or port."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:218
+msgid "Select a valid Mailgun region: US or EU."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:221
+msgid "The Mailgun API key is missing or invalid. Enter it again or check the wp-config.php override."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:242
+msgid "Mailgun HTTP request failed. Check connectivity, TLS and timeout settings."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:243
+msgid "Mailgun rejected authentication or domain permissions. Check the API key and its permissions."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:244
+msgid "Mailgun domain or API resource was not found. Check the sending domain and region."
+msgstr ""
+
+#: src/Providers/Mailgun_Provider.php:245
+msgid "Mailgun rate limit reached. Try again later."
+msgstr ""
+
+#. translators: %d: HTTP status code
+#: src/Providers/Mailgun_Provider.php:246
+#, php-format
+msgid "Mailgun request failed (HTTP %d)."
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:35
+msgid "Client ID"
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:36
+msgid "Client secret"
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:36
+msgid "The secret value from your OAuth application. Leave blank to keep the stored value."
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:92
+msgid "The mail API could not be reached. Check connectivity, TLS and timeout settings."
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:93
+msgid "The mail API rejected access. Check consent, mailbox permissions, sender aliases and the client secret expiry."
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:94
+msgid "The mail API rate limit was reached. Try again later."
+msgstr ""
+
+#. translators: %d: HTTP status
+#: src/Providers/OAuth_Provider.php:95
+#, php-format
+msgid "The mail API rejected the request (HTTP %d)."
+msgstr ""
+
+#: src/Providers/OAuth_Provider.php:105
+msgid "OAuth token acquired. This does not verify mailbox Send As permissions or delivery; use Send test mail to check those."
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:22
+msgid "Microsoft 365"
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:29
+msgid "Authorization mode"
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:33
+msgid "Delegated (sign in to a mailbox)"
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:34
+msgid "Application (client credentials)"
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:37
+#: src/Providers/Smtp_OAuth_Provider.php:35
+msgid "Directory (tenant) ID"
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:37
+msgid "Use the UUID from your Microsoft Entra app overview. This connection supports one tenant in the global Microsoft cloud."
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:38
+msgid "Mailbox address (application mode)"
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:38
+msgid "Required in application mode. Delegated mode sends through the signed-in mailbox. From aliases need provider-side Send As permission."
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:48
+msgid "The encoded MIME message exceeds the 4 MB Graph request limit. Reduce attachments; large attachment upload sessions are not supported."
+msgstr ""
+
+#: src/Providers/Office365_Provider.php:60
+msgid "Graph returned an unexpected success response. Automatic failover was stopped to avoid duplicates."
+msgstr ""
+
+#: src/Providers/Smtp_OAuth_Provider.php:29
+msgid "Google SMTP / XOAUTH2"
+msgstr ""
+
+#: src/Providers/Smtp_OAuth_Provider.php:29
+msgid "Microsoft 365 SMTP / XOAUTH2"
+msgstr ""
+
+#: src/Providers/Smtp_OAuth_Provider.php:33
+msgid "Mailbox login address"
+msgstr ""
+
+#: src/Providers/Smtp_OAuth_Provider.php:33
+msgid "Sign in as this mailbox when connecting. Use its primary address, not a sender alias. SMTP OAuth supports delegated access to the signed-in mailbox."
+msgstr ""
+
+#: src/Providers/Smtp_OAuth_Provider.php:35
+msgid "Single-tenant UUID for Microsoft 365 in the global cloud."
+msgstr ""
+
+#: src/Providers/Smtp_OAuth_Provider.php:86
+msgid "SMTP XOAUTH2 authentication failed. Check the connected mailbox, SMTP permission and provider SMTP AUTH policy."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:30
+msgid "SMTP"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:35
+msgid "SMTP host"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:36
+msgid "Port"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:36
+msgid "Usually 587 (STARTTLS) or 465 (SSL/TLS)."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:39
+msgid "Encryption"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:44
+msgid "STARTTLS"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:45
+msgid "SSL/TLS (implicit)"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:46
+msgid "None (not recommended)"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:51
+msgid "Verify TLS certificate"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:56
+msgid "Recommended. Only disable it for trusted networks (e.g. a VPN to the mail server) when the certificate does not match the host. The connection stays encrypted, but the server identity is not checked."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:61
+msgid "Certificate host name"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:66
+msgid "Only needed when the host is an IP address or an alias: the name the server certificate is issued for, e.g. mail.example.com. The certificate is still fully verified against this name."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:68
+msgid "Authentication"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:69
+msgid "Username"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:70
+msgid "Password"
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:137
+msgid "SMTP delivery could not be tracked. Acceptance is unknown; automatic failover was stopped to avoid duplicates."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:142
+msgid "SMTP accepted the message for some recipients and rejected others. Automatic failover was stopped to avoid duplicate delivery; check recipient outcomes before retrying."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:148
+msgid "SMTP did not confirm acceptance after message submission. Delivery is uncertain; automatic failover was stopped to avoid duplicates."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:152
+msgid "SMTP permanently rejected one or more recipients. Automatic failover was stopped."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:156
+msgid "SMTP rejected message data before accepting delivery."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:159
+msgid "SMTP temporarily rejected the recipients before accepting delivery."
+msgstr ""
+
+#: src/Providers/Smtp_Provider.php:206
+msgid "The server certificate is issued for a different name than the configured host. Enter that name as \"Certificate host name\", or disable \"Verify TLS certificate\" for a trusted network such as a VPN."
+msgstr ""
+
+#: src/Routing/Failover_Settings.php:42
+msgid "Enter one valid alert address, or leave it empty to disable alert mails."
+msgstr ""
+
+#. translators: 1: site name, 2: connection label
+#: src/Routing/Failure_Alert.php:43
+#, php-format
+msgid "[%1$s] Mail connection \"%2$s\" is failing"
+msgstr ""
+
+#. translators: 1: connection label, 2: number of failures, 3: date and time
+#: src/Routing/Failure_Alert.php:46
+#, php-format
+msgid "The mail connection \"%1$s\" failed %2$d times in a row and is skipped until %3$s. Other connections in the failover chain send the mail meanwhile."
+msgstr ""
+
+#. translators: 1: site name, 2: connection label
+#: src/Routing/Failure_Alert.php:57
+#, php-format
+msgid "[%1$s] Mail connection \"%2$s\" works again"
+msgstr ""
+
+#. translators: %s: connection label
+#: src/Routing/Failure_Alert.php:59
+#, php-format
+msgid "The mail connection \"%s\" delivered a message again (or was reset) and is back in the failover chain."
+msgstr ""
+
+#. translators: %s: site name
+#: src/Routing/Failure_Alert.php:70
+#, php-format
+msgid "[%s] A queued mail could not be delivered"
+msgstr ""
+
+#. translators: 1: subject, 2: number of recipients, 3: date and time (UTC)
+#: src/Routing/Failure_Alert.php:73
+#, php-format
+msgid "The message \"%1$s\" to %2$d recipient(s), queued at %3$s UTC, could not be delivered by any connection and was discarded."
+msgstr ""
+
+#. translators: %s: admin URL
+#: src/Routing/Failure_Alert.php:116
+#, php-format
+msgid "Connections: %s"
+msgstr ""
+
+#: src/Routing/Retry_Queue.php:61
+msgid "Every five minutes (SW Mailgate retry queue)"
+msgstr ""
+
+#: src/Update/Manifest.php:46
+msgid "Release verification failed. The release was not accepted."
+msgstr ""
+
+#: src/Update/Package.php:30
+msgid "ZIP size or SHA-256 does not match, or ZIP verification is unavailable."
+msgstr ""
+
+#: src/Update/Package.php:34
+msgid "Invalid ZIP archive."
+msgstr ""
+
+#: src/Update/Package.php:40
+msgid "The update package failed the safety checks."
+msgstr ""
+
+#: src/Update/Provider.php:67
+msgid "Manual updates only"
+msgstr ""
+
+#: src/Update/Provider.php:87
+msgid "GitHub installation is only allowed manually in the WordPress backend."
+msgstr ""
+
+#: src/Update/Provider.php:91
+msgid "Automatic GitHub installation is blocked."
+msgstr ""
+
+#: src/Update/Provider.php:110
+msgid "No valid manual WordPress update request."
+msgstr ""
+
+#: src/Update/Provider.php:213
+msgid "Signed GitHub release. Install only manually through WordPress."
+msgstr ""
+
+#: src/Update/Provider.php:231
+msgid "Check for updates now"
+msgstr ""
+
+#: src/Update/Provider.php:242
+msgid "GitHub updates are blocked: no public release key is configured."
+msgstr ""
+
+#: src/Update/Provider.php:246
+msgid "No verified update check yet."
+msgstr ""
+
+#. translators: %s: time span, e.g. "2 hours"
+#: src/Update/Provider.php:249
+#, php-format
+msgid "Last verified check: %s ago."
+msgstr ""
+
+#: src/Update/Provider.php:289
+msgid "Checking signed releases …"
+msgstr ""
+
+#: src/Update/Provider.php:290
+msgid "Check finished."
+msgstr ""
+
+#: src/Update/Provider.php:291
+msgid "GitHub could not be reached. Please try again later."
+msgstr ""
+
+#: src/Update/Service.php:51
+msgid "Update checks are only allowed in an authorised backend session."
+msgstr ""
+
+#: src/Update/Service.php:54
+msgid "No public release key or Sodium is available. GitHub updates are blocked."
+msgstr ""
+
+#: src/Update/Service.php:58
+msgid "An update check is already running."
+msgstr ""
+
+#: src/Update/Service.php:64
+msgid "The last update check is still within the check interval."
+msgstr ""
+
+#: src/Update/Service.php:71
+msgid "The check took too long. The result was not adopted."
+msgstr ""
+
+#: src/Update/Service.php:79
+msgid "Signed release information verified. Install updates only through the WordPress plugin list."
+msgstr ""
+
+#: src/Update/Service.php:81
+msgid "Invalid release response."
+msgstr ""
+
+#: src/Update/Service.php:103
+msgid "No valid stable release response."
+msgstr ""
+
+#: src/Update/Service.php:112
+msgid "Release manifest or signature is missing."
+msgstr ""
+
+#: src/Update/Service.php:128
+msgid "An already verified newer version must not be rolled back."
+msgstr ""
+
+#: src/Update/Service.php:150
+msgid "Please check for updates again before installing."
+msgstr ""
+
+#: src/Update/Service.php:157
+msgid "Outdated release offer."
+msgstr ""
+
+#: src/Update/Service.php:178
+msgid "Package, version or system requirements do not match."
+msgstr ""
+
+#: src/Update/Service.php:186
+msgid "Temporary update file unavailable."
+msgstr ""
+
+#: src/Update/Service.php:207
+msgid "The update download failed."
+msgstr ""
+
+#: src/Update/Transport.php:27
+msgid "Update address not allowed."
+msgstr ""
+
+#: src/Update/Transport.php:47
+msgid "GitHub could not be reached."
+msgstr ""
+
+#: src/Update/Transport.php:53
+msgid "Invalid redirect."
+msgstr ""
+
+#. translators: %d: HTTP status code
+#: src/Update/Transport.php:60
+#, php-format
+msgid "GitHub responded with HTTP %d."
+msgstr ""
+
+#: src/Update/Transport.php:65
+msgid "The update response exceeds the size limit."
+msgstr ""
+
+#: src/Update/Transport.php:69
+msgid "Too many update redirects."
+msgstr ""
+
+#. translators: 1: required PHP version, 2: current PHP version
+#: sw-mailgate.php:37
+#, php-format
+msgid "SW Mailgate requires PHP %1$s or newer. You are running PHP %2$s."
+msgstr ""
+
+#: sw-mailgate.php:59
+msgid "SW Mailgate: the vendor directory is missing. Install the release package or run \"composer install\"."
+msgstr ""
+
+#. translators: %s: constant name
+#: templates/admin/connection-edit.php:31
+#, php-format
+msgid "Defined in wp-config.php as %s."
+msgstr ""
+
+#. translators: %s: provider name
+#: templates/admin/connection-edit.php:42
+#, php-format
+msgid "Add %s connection"
+msgstr ""
+
+#. translators: %s: connection label
+#: templates/admin/connection-edit.php:44
+#, php-format
+msgid "Edit connection \"%s\""
+msgstr ""
+
+#: templates/admin/connection-edit.php:48
+msgid "Back to connections"
+msgstr ""
+
+#: templates/admin/connection-edit.php:63
+msgid "General"
+msgstr ""
+
+#: templates/admin/connection-edit.php:66
+msgid "Name"
+msgstr ""
+
+#. translators: %s: constant prefix
+#: templates/admin/connection-edit.php:74
+#, php-format
+msgid "Every value can be set in wp-config.php instead, using a constant with the prefix %s followed by the field key in upper case."
+msgstr ""
+
+#: templates/admin/connection-edit.php:84
+msgid "Use this connection"
+msgstr ""
+
+#: templates/admin/connection-edit.php:88
+#: templates/admin/connections.php:55
+#: templates/admin/messages.php:32
+msgid "Sender"
+msgstr ""
+
+#: templates/admin/connection-edit.php:91
+msgid "From address"
+msgstr ""
+
+#: templates/admin/connection-edit.php:94
+msgid "An address this provider may send from (verified domain or mailbox). Leave empty to keep the sender set by WordPress or the sending plugin."
+msgstr ""
+
+#: templates/admin/connection-edit.php:98
+msgid "From name"
+msgstr ""
+
+#: templates/admin/connection-edit.php:102
+msgid "Rules"
+msgstr ""
+
+#: templates/admin/connection-edit.php:104
+msgid "Always use this sender (otherwise only the WordPress default \"wordpress@…\" is replaced)"
+msgstr ""
+
+#: templates/admin/connection-edit.php:105
+msgid "Use the original sender as Reply-To when it is replaced"
+msgstr ""
+
+#: templates/admin/connection-edit.php:125
+msgid "•••••••• (stored, leave empty to keep)"
+msgstr ""
+
+#: templates/admin/connection-edit.php:127
+msgid "Delete stored value"
+msgstr ""
+
+#: templates/admin/connection-edit.php:149
+#: templates/admin/connections.php:145
+msgid "Add connection"
+msgstr ""
+
+#: templates/admin/connection-edit.php:149
+msgid "Save connection"
+msgstr ""
+
+#: templates/admin/connection-edit.php:154
+msgid "OAuth authorization"
+msgstr ""
+
+#: templates/admin/connection-edit.php:155
+msgid "These actions use the saved connection. Save any changes to client credentials or mode first."
+msgstr ""
+
+#: templates/admin/connection-edit.php:157
+msgid "OAuth credentials are stored for this configuration."
+msgstr ""
+
+#: templates/admin/connection-edit.php:157
+msgid "No current OAuth credentials for this configuration."
+msgstr ""
+
+#: templates/admin/connection-edit.php:163
+msgid "Reconnect mailbox"
+msgstr ""
+
+#: templates/admin/connection-edit.php:163
+msgid "Connect mailbox"
+msgstr ""
+
+#: templates/admin/connection-edit.php:166
+msgid "Application mode does not need a browser sign-in. The connection test obtains a token using the saved client credentials."
+msgstr ""
+
+#: templates/admin/connection-edit.php:172
+msgid "Remove local OAuth credentials"
+msgstr ""
+
+#: templates/admin/connection-edit.php:177
+msgid "Connection tests verify TLS and XOAUTH2 login without sending mail. Send a test mail to verify sender permissions and delivery."
+msgstr ""
+
+#: templates/admin/connection-edit.php:179
+msgid "Connection tests acquire an OAuth token without sending mail. A token alone does not prove Send As or mailbox access; send a test mail to verify those permissions."
+msgstr ""
+
+#: templates/admin/connection-edit.php:191
+msgid "Test connection (no mail is sent)"
+msgstr ""
+
+#: templates/admin/connection-edit.php:197
+msgid "Delivery webhooks"
+msgstr ""
+
+#: templates/admin/connection-edit.php:198
+msgid "Copy webhook URL"
+msgstr ""
+
+#: templates/admin/connection-edit.php:200
+msgid "Copied"
+msgstr ""
+
+#: templates/admin/connection-edit.php:200
+msgid "Copy URL"
+msgstr ""
+
+#: templates/admin/connection-edit.php:201
+msgid "Save the HTTP webhook signing key first. Register delivered, permanent_fail and complained at Mailgun. Tracking requires logging enabled in wp-config.php. For several recipients, any bounce/complaint takes precedence over delivery."
+msgstr ""
+
+#: templates/admin/connection-edit.php:205
+msgid "Create webhooks at Mailgun"
+msgstr ""
+
+#: templates/admin/connections.php:24
+msgid "Delete this connection and its stored credentials?"
+msgstr ""
+
+#: templates/admin/connections.php:37
+msgid "Mail connections"
+msgstr ""
+
+#: templates/admin/connections.php:43
+msgid "Mails are sent through the first enabled connection. If it fails with a temporary or login error, the next one is tried. Messages rejected for their content or recipients are not retried elsewhere. A connection that fails repeatedly is skipped for a while (see Settings)."
+msgstr ""
+
+#: templates/admin/connections.php:46
+msgid "No connection is enabled. WordPress currently sends mail with PHP mail()."
+msgstr ""
+
+#: templates/admin/connections.php:52
+msgid "Order"
+msgstr ""
+
+#: templates/admin/connections.php:54
+#: templates/admin/log-detail.php:31
+msgid "Provider"
+msgstr ""
+
+#: templates/admin/connections.php:57
+msgid "Actions"
+msgstr ""
+
+#: templates/admin/connections.php:62
+msgid "No connections yet. Add one below."
+msgstr ""
+
+#: templates/admin/connections.php:98
+#: templates/admin/settings.php:49
+msgid "Disabled"
+msgstr ""
+
+#. translators: %s: time
+#: templates/admin/connections.php:105
+#, php-format
+msgid "Paused until %s"
+msgstr ""
+
+#: templates/admin/connections.php:106
+msgid "Failing"
+msgstr ""
+
+#. translators: 1: number of failures, 2: error message
+#: templates/admin/connections.php:113
+#, php-format
+msgid "%1$d failures in a row. Last error: %2$s"
+msgstr ""
+
+#: templates/admin/connections.php:116
+msgid "Reset and use again"
+msgstr ""
+
+#: templates/admin/connections.php:118
+msgid "Enabled"
+msgstr ""
+
+#: templates/admin/connections.php:133
+msgid "Edit"
+msgstr ""
+
+#: templates/admin/connections.php:135
+msgid "Disable"
+msgstr ""
+
+#: templates/admin/connections.php:135
+msgid "Enable"
+msgstr ""
+
+#: templates/admin/connections.php:137
+msgid "Delete"
+msgstr ""
+
+#: templates/admin/connections.php:168
+msgid "Credentials are encrypted with a key derived from the WordPress salts. If the salts change, stored credentials become unreadable. Add a dedicated key to wp-config.php:"
+msgstr ""
 
 #: templates/admin/connections.php:173
 msgid "Open source by Stefan Warnat – free to use, free to change, better together."
+msgstr ""
+
+#: templates/admin/dns.php:19
+msgid "Allow DNS-over-HTTPS fallback through Cloudflare when local DNS fails. This sends queried domain names to Cloudflare."
+msgstr ""
+
+#: templates/admin/dns.php:20
+msgid "Save and check again"
+msgstr ""
+
+#: templates/admin/dns.php:22
+msgid "Results are cached for one hour and checked weekly. DNS alone does not prove that outgoing messages pass authentication. Review all fallback senders using received test mails."
+msgstr ""
+
+#: templates/admin/dns.php:26
+msgid "Check"
+msgstr ""
+
+#: templates/admin/dns.php:26
+msgid "Expected record"
+msgstr ""
+
+#: templates/admin/dns.php:26
+msgid "Recommendation"
+msgstr ""
+
+#: templates/admin/log-detail.php:15
+msgid "Mail details"
+msgstr ""
+
+#: templates/admin/log-detail.php:16
+msgid "Back to mail log"
+msgstr ""
+
+#: templates/admin/log-detail.php:21
+msgid "The message was sent again."
+msgstr ""
+
+#: templates/admin/log-detail.php:21
+msgid "The message could not be sent."
+msgstr ""
+
+#: templates/admin/log-detail.php:32
+msgid "From"
+msgstr ""
+
+#: templates/admin/log-detail.php:34
+msgid "Original recipients"
+msgstr ""
+
+#: templates/admin/log-detail.php:35
+msgid "Error class"
+msgstr ""
+
+#: templates/admin/log-detail.php:36
+msgid "Error"
+msgstr ""
+
+#: templates/admin/log-detail.php:38
+msgid "Provider message ID"
+msgstr ""
+
+#: templates/admin/log-detail.php:39
+msgid "Caller"
+msgstr ""
+
+#: templates/admin/log-detail.php:49
+msgid "Stored message source"
+msgstr ""
+
+#: templates/admin/log-detail.php:56
+msgid "Send another copy to the original To, Cc and Bcc recipients through the current failover chain."
+msgstr ""
+
+#: templates/admin/log-detail.php:57
+msgid "Resend message"
+msgstr ""
+
+#: templates/admin/log-detail.php:60
+msgid "Attachments are not retained. This message cannot be resent from the log."
+msgstr ""
+
+#: templates/admin/log-detail.php:63
+msgid "No message content was stored. Resending is unavailable."
+msgstr ""
+
+#: templates/admin/log.php:17
+msgid "Each row is a connection attempt. Open the subject to see all attempts for that message. Dates are UTC."
+msgstr ""
+
+#: templates/admin/log.php:22
+msgid "All statuses"
+msgstr ""
+
+#: templates/admin/log.php:41
+msgid "All connections"
+msgstr ""
+
+#: templates/admin/log.php:46
+msgid "From date"
+msgstr ""
+
+#: templates/admin/log.php:48
+msgid "To date"
+msgstr ""
+
+#: templates/admin/log.php:50
+msgid "Filter"
+msgstr ""
+
+#: templates/admin/log.php:51
+msgid "Search mail"
+msgstr ""
+
+#: templates/admin/log.php:54
+msgid "Export filtered log as CSV"
+msgstr ""
+
+#: templates/admin/messages.php:19
+msgid "temporary error, failover allowed"
+msgstr ""
+
+#: templates/admin/messages.php:20
+msgid "login or configuration error, failover allowed"
+msgstr ""
+
+#: templates/admin/messages.php:21
+msgid "message rejected, no failover"
+msgstr ""
+
+#: templates/admin/messages.php:31
+msgid "Result"
+msgstr ""
+
+#: templates/admin/messages.php:33
+msgid "Duration"
+msgstr ""
+
+#: templates/admin/messages.php:43
+msgid "OK"
+msgstr ""
+
+#: templates/admin/messages.php:53
+msgid "Details"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:12
+msgid "Close"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:13
+msgid "How do I create the OAuth client credentials?"
+msgstr ""
+
+#. translators: %s: provider
+#: templates/admin/oauth-setup.php:15
+#, php-format
+msgid "Set up %s"
+msgstr ""
+
+#. translators: %s: provider
+#: templates/admin/oauth-setup.php:16
+msgid "Create your own application in the provider account. Use an HTTPS WordPress installation and an administrator who can manage Mailgate. Client secrets and tokens are encrypted; the editor never displays stored secret values."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:17
+msgid "Redirect URI for this WordPress installation"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:19
+msgid "Copy this complete URL exactly, including https, host, subdirectory and query string. Each staging, production or multisite site needs its own registered URI. After a site move, update it at the provider and reconnect the mailbox."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:24
+msgid "1. Create a project and enable Gmail"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:26
+msgid "Open Google Cloud Console, choose a project or create a dedicated project for this WordPress site."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:26
+#: templates/admin/oauth-smtp-setup.php:17
+msgid "Google Cloud Console"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:27
+msgid "Open APIs & Services → Library, find Gmail API and enable it in that project."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:29
+msgid "2. Configure consent and the audience"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:31
+msgid "Open Google Auth Platform → Branding. Set the application name, support email and developer contact; complete the initial setup."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:32
+msgid "Under Audience, use Internal only for an eligible Google Workspace organization and accounts inside it. Otherwise choose External. While testing an external app, add the sending Google account as a test user."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:33
+msgid "Under Data Access, add only the Gmail send scope shown below. Mailgate does not request inbox-reading or mailbox-management access."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:35
+msgid "gmail.send is a sensitive scope, not a restricted scope."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:35
+msgid "An internal Workspace app normally avoids public verification, but organization access policies still apply. An external production app may need Google verification. External apps left in Testing generally receive refresh tokens that expire after seven days for this scope; do not treat Testing as an unattended production setup."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:36
+msgid "3. Create a Web application client"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:38
+msgid "Open Google Auth Platform → Clients → Create client. Select Web application and give it a recognizable name."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:39
+msgid "Add the exact Redirect URI above under Authorized redirect URIs. JavaScript origins are not required by this server-side integration."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:40
+msgid "Create the client and copy its Client ID and Client secret into the corresponding Mailgate fields. Keep the secret securely; do not use an API key, a service-account JSON file or your mailbox password."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:42
+msgid "4. Connect and verify"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:44
+msgid "Save this connection, then choose Connect mailbox. Sign in to the Google account that should send mail and approve sending permission."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:45
+msgid "Set the From address to that mailbox or an alias already permitted by Gmail. Run the connection test, then send a test mail."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:46
+msgid "If access is revoked or a testing token expires, use Reconnect mailbox. If redirect_uri_mismatch appears, compare the registered URI character for character."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:48
+msgid "Gmail accepts the prepared MIME including Bcc. Messages over 5 MB use the media upload endpoint; messages over the 35 MB API limit are rejected locally."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:49
+msgid "Google consent setup"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:49
+msgid "Gmail scope reference"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:49
+msgid "Google Web OAuth guide"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:51
+msgid "1. Register a Microsoft Entra application"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:53
+msgid "Open Microsoft Entra admin center → Identity → Applications → App registrations → New registration."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:53
+#: templates/admin/oauth-smtp-setup.php:33
+msgid "Microsoft Entra admin center"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:54
+msgid "Choose a name and Accounts in this organizational directory only (single tenant). This integration uses the global Microsoft cloud and a work or school tenant."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:55
+msgid "For Delegated mode, register the Redirect URI above with platform Web. Do not select Single-page application, enable implicit grants or allow public-client flows. Application mode does not require a redirect URI."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:56
+msgid "From Overview, copy Application (client) ID into Client ID and Directory (tenant) ID into the tenant field. Use the tenant UUID, not common, organizations or a tenant URL."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:57
+msgid "Open Certificates & secrets → Client secrets → New client secret. Choose a suitable expiry and copy the secret Value immediately into Mailgate. The Secret ID is not the secret. Plan to rotate it before expiry."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:59
+msgid "2A. Delegated mode: send through a signed-in mailbox"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:61
+msgid "In API permissions → Add a permission → Microsoft Graph → Delegated permissions, add Mail.Send. Mailgate also requests offline_access to renew the session. It does not require User.Read, Mail.Read or Mail.ReadWrite."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:62
+msgid "Grant administrator consent if your tenant requires it. Select Delegated in Mailgate and save the client settings."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:63
+msgid "Choose Connect mailbox and sign in as the sending mailbox user. Sending uses /me/sendMail; the application-mode mailbox field is ignored. Shared-mailbox delegation and Mail.Send.Shared are not part of this mode."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:65
+msgid "2B. Application mode: unattended mail for a scoped mailbox"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:67
+msgid "Choose Application in Mailgate and enter the exact mailbox address to send through. Tokens use the client-credentials flow; there is no mailbox sign-in or refresh token."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:68
+msgid "Have your Exchange administrator grant the Application Mail.Send role through Exchange Online RBAC for Applications, limited to the intended mailbox scope. Register the enterprise service principal in Exchange, create the resource scope and assign the scoped role; test the authorization before use."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:69
+msgid "Important: a tenant-wide Microsoft Graph Application Mail.Send grant in Entra is additive to Exchange RBAC. Remove an unscoped grant if relying on RBAC mailbox restrictions; merely adding a scoped RBAC role does not restrict that broader grant."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:70
+msgid "If using the older Application Access Policy approach instead, Graph Application Mail.Send needs administrator consent and an Exchange policy restricting the app to the intended mail-enabled security group. Test an allowed and a disallowed mailbox. Changing the mailbox field here is not a provider-side access restriction."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:72
+msgid "Exchange RBAC setup, PowerShell commands and authorization tests"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:73
+msgid "3. Save and send a test mail"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:74
+msgid "Use a From address permitted for the selected mailbox. Save, test token acquisition, then send a test mail to check actual mailbox and Send As permissions. A 202 response means Graph accepted the request, not that the recipient has received it. This integration rejects encoded MIME requests above 4 MB; large attachment upload sessions are not implemented."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:75
+msgid "For invalid_client, check the secret Value and expiry. For consent or access errors, check the permission type, tenant, mailbox scope and Send As rules. After rotating a secret, save it and reconnect delegated access."
+msgstr ""
+
+#: templates/admin/oauth-setup.php:76
+msgid "Register an app"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:76
+msgid "Graph sendMail"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:78
+msgid "Disconnecting and keeping access working"
+msgstr ""
+
+#: templates/admin/oauth-setup.php:79
+msgid "Mailgate renews tokens automatically while the provider grant remains valid. Removing local OAuth credentials clears the local token cache and cancels pending authorizations; it does not revoke the provider grant. Revoke that separately in the provider account. In Application mode, client credentials can obtain another token until the app secret or provider permission is revoked."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:12
+msgid "SMTP OAuth uses delegated mailbox authorization. Save the client credentials and mailbox login address, then choose Connect mailbox. Sign in as that mailbox. API tokens and SMTP tokens have different permissions; create a separate Mailgate connection and authorize it independently."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:13
+msgid "Mailgate fixes the SMTP endpoint to port 587 with mandatory STARTTLS and certificate verification. Host, port, encryption and password overrides do not change this transport."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:15
+msgid "1. Create the Google project and consent configuration"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:17
+msgid "Open Google Cloud Console and select or create a project for this site. Open Google Auth Platform → Branding and enter the application name, support email and developer contact."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:18
+msgid "Under Audience choose Internal for eligible Google Workspace organization accounts, or External otherwise. In external Testing mode, add the sending mailbox as a test user."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:19
+msgid "Under Data Access add the scope below; enter it manually if necessary. SMTP requires full mail access. The Gmail API gmail.send scope does not authorize SMTP."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:21
+msgid "This is a restricted scope with access to read, send, change and permanently delete mail."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:21
+msgid "Mailgate uses it only for SMTP submission, but the grant itself is broader. Prefer the Google / Gmail API provider if send-only permission meets your needs. External production apps may require restricted-scope verification and a security assessment, depending on how restricted data is handled. Internal Workspace apps remain subject to organization access policies. External Testing refresh tokens generally expire after seven days."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:22
+msgid "2. Create a Web application OAuth client"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:24
+msgid "Open Google Auth Platform → Clients → Create client → Web application. Register the exact Redirect URI above under Authorized redirect URIs. JavaScript origins are not required."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:25
+msgid "Copy Client ID and Client secret into Mailgate. Do not use a mailbox password, app password, API key or service-account file."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:26
+msgid "Enter the primary Gmail or Workspace mailbox as Mailbox login address. Save, connect that account and approve the full mail scope. Set From to the mailbox or a permitted sending alias."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:28
+msgid "STARTTLS, XOAUTH2. Workspace administrators may need to allow the OAuth app. Gmail SMTP message-size and sending limits apply; the Gmail API media-upload path is not used."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:29
+msgid "Google SMTP XOAUTH2 and required scope"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:29
+msgid "Restricted-scope verification"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:31
+msgid "1. Register a Microsoft Entra Web application"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:33
+msgid "Open Microsoft Entra admin center → Identity → Applications → App registrations → New registration. Select Accounts in this organizational directory only. This provider supports Microsoft 365 work or school mailboxes in the global cloud."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:34
+msgid "Register the exact Redirect URI above using platform Web. Do not enable implicit grants, SPA or public-client flows. Copy Application (client) ID and Directory (tenant) ID from Overview into Mailgate; the tenant must be its UUID."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:35
+msgid "Under Certificates & secrets create a client secret. Copy the secret Value immediately, not the Secret ID. Save it securely and plan rotation before expiry."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:37
+msgid "2. Grant the Exchange Online SMTP permission"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:39
+msgid "Under API permissions → Add a permission, select Office 365 Exchange Online → Delegated permissions → SMTP.Send. If it is not listed, search under APIs my organization uses for Office 365 Exchange Online (resource ID 00000002-0000-0ff1-ce00-000000000000). Graph Mail.Send does not authorize SMTP."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:40
+msgid "Mailgate requests the SMTP scope below plus offline_access for refresh tokens. Grant administrator consent if required by tenant policy. SMTP.SendAsApp application permissions are not supported by this connection type."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:41
+msgid "Enter the primary mailbox address as Mailbox login address. Save the connection and choose Connect mailbox. Sign in as that mailbox and approve the delegated permission. Shared-mailbox delegation is not supported by this connection type."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:43
+msgid "3. Check whether authenticated SMTP is permitted"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:44
+msgid "An Exchange administrator must verify the organization and mailbox SMTP AUTH settings. In Microsoft 365 admin center: Users → Active users → select the mailbox → Mail → Manage email apps → Authenticated SMTP. With Exchange Online PowerShell, inspect SmtpClientAuthenticationDisabled on both Get-TransportConfig and Get-CASMailbox -Identity mailbox@example.com; a null mailbox value inherits the organization setting. If policy permits, enable SMTP AUTH only for the intended mailbox, for example with Set-CASMailbox -Identity mailbox@example.com -SmtpClientAuthenticationDisabled $false."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:45
+msgid "Security Defaults or organization policy may block SMTP AUTH. Prefer the Microsoft 365 Graph provider when SMTP is prohibited; do not weaken tenant security merely to use this transport. XOAUTH2 does not require enabling Basic authentication or an app password."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:46
+msgid "STARTTLS, XOAUTH2. Use a permitted From address; another sender needs Exchange Send As authorization. Exchange SMTP limits apply, rather than the Graph 4 MB request limit."
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:47
+msgid "Microsoft SMTP OAuth setup"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:47
+msgid "SMTP AUTH settings"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:49
+msgid "Test and troubleshoot"
+msgstr ""
+
+#: templates/admin/oauth-smtp-setup.php:50
+msgid "Test connection opens a verified TLS SMTP session and authenticates with XOAUTH2 without submitting mail. Then send a test mail to verify From/Send As permissions and delivery. A 535 error can mean missing SMTP consent, a different signed-in mailbox, revoked access or disabled SMTP AUTH. After changing the mailbox login or client credentials, save and reconnect. Expired access tokens are renewed automatically; rejected SMTP submissions are not automatically replayed on this connection."
+msgstr ""
+
+#: templates/admin/settings.php:20
+msgid "Settings saved."
+msgstr ""
+
+#: templates/admin/settings.php:23
+msgid "Waiting messages were retried."
+msgstr ""
+
+#: templates/admin/settings.php:23
+msgid "Waiting messages were discarded."
+msgstr ""
+
+#: templates/admin/settings.php:30
+msgid "Redirect mail to"
+msgstr ""
+
+#: templates/admin/settings.php:33
+msgid "Redirect recipients to this address; leave empty to disable. Allowlisted recipients keep receiving mail directly."
+msgstr ""
+
+#: templates/admin/settings.php:35
+msgid "The target is controlled by SW_MAILGATE_REDIRECT_TO in wp-config.php."
+msgstr ""
+
+#: templates/admin/settings.php:40
+msgid "Do not redirect"
+msgstr ""
+
+#: templates/admin/settings.php:43
+msgid "One email address or exact domain per line. Domain rules include every mailbox at that domain, but no subdomains. Wildcards are not supported."
+msgstr ""
+
+#: templates/admin/settings.php:47
+msgid "Logging"
+msgstr ""
+
+#: templates/admin/settings.php:49
+msgid "Enabled in wp-config.php"
+msgstr ""
+
+#: templates/admin/settings.php:50
+msgid "Logging is off by default and can only be enabled in wp-config.php:"
+msgstr ""
+
+#: templates/admin/settings.php:54
+msgid "Message content"
+msgstr ""
+
+#: templates/admin/settings.php:54
+msgid "Store message bodies and recipient headers for resending"
+msgstr ""
+
+#: templates/admin/settings.php:54
+msgid "Off by default. Content may contain personal data or password reset links. Attachments are never stored."
+msgstr ""
+
+#: templates/admin/settings.php:55
+msgid "Mask addresses"
+msgstr ""
+
+#: templates/admin/settings.php:55
+msgid "Mask email addresses in new log entries"
+msgstr ""
+
+#: templates/admin/settings.php:55
+msgid "Also disables content storage. Existing entries are unchanged; privacy erasure remains available for masked entries."
+msgstr ""
+
+#: templates/admin/settings.php:56
+msgid "Retention (days)"
+msgstr ""
+
+#: templates/admin/settings.php:56
+msgid "Expired entries are deleted daily by WordPress cron, even while logging is disabled."
+msgstr ""
+
+#: templates/admin/settings.php:59
+msgid "Failover"
+msgstr ""
+
+#: templates/admin/settings.php:62
+msgid "Pause failing connections"
+msgstr ""
+
+#. translators: 1: number input, 2: number input
+#: templates/admin/settings.php:67
+#, php-format
+msgid "After %1$s failures in a row, skip the connection for %2$s minutes."
+msgstr ""
+
+#: templates/admin/settings.php:69
+msgid "Pause in minutes"
+msgstr ""
+
+#: templates/admin/settings.php:72
+msgid "Only temporary and login errors count. Mails then go straight to the next connection instead of waiting for the same timeout again. After the pause, the next mail tries the connection again. If every connection is paused, the whole chain is tried anyway. 0 disables pausing."
+msgstr ""
+
+#: templates/admin/settings.php:76
+msgid "Timeouts"
+msgstr ""
+
+#: templates/admin/settings.php:78
+msgid "Fail over when an API provider does not answer after the message was sent"
+msgstr ""
+
+#: templates/admin/settings.php:79
+msgid "The provider may have accepted the message anyway, so recipients can get it twice. Uncheck to prefer no duplicates: the mail is then reported as \"delivery uncertain\" instead. Connection and DNS errors always fail over. SMTP always stops when the server does not confirm a submitted message."
+msgstr ""
+
+#: templates/admin/settings.php:83
+msgid "Alert mail"
+msgstr ""
+
+#: templates/admin/settings.php:86
+msgid "Notify this address when a connection is paused, when it works again and when a queued mail is given up. Alerts are sent through the other connections. Leave empty to disable."
+msgstr ""
+
+#: templates/admin/settings.php:90
+msgid "Retry queue"
+msgstr ""
+
+#: templates/admin/settings.php:92
+msgid "Keep mails that no connection could send and retry them later"
+msgstr ""
+
+#: templates/admin/settings.php:94
+msgid "Give up after (hours)"
+msgstr ""
+
+#: templates/admin/settings.php:97
+msgid "Off by default. Only temporary and login errors are queued; wp_mail() then reports success to the calling plugin. The message, including attachments up to 5 MB, is stored encrypted until it is delivered or given up. Retries run via WordPress cron after 5, 15, 30, 60 minutes and then every 2–4 hours. Settings that other plugins apply during sending (e.g. DKIM signing via phpmailer_init) are not applied again on retries."
+msgstr ""
+
+#: templates/admin/settings.php:102
+msgid "Data"
+msgstr ""
+
+#: templates/admin/settings.php:104
+msgid "Uninstall"
+msgstr ""
+
+#: templates/admin/settings.php:104
+msgid "Delete connections, credentials, settings and logs when uninstalling"
+msgstr ""
+
+#: templates/admin/settings.php:110
+msgid "Waiting in the retry queue"
+msgstr ""
+
+#: templates/admin/settings.php:116
+msgid "Queued (UTC)"
+msgstr ""
+
+#: templates/admin/settings.php:117
+msgid "Next retry (UTC)"
+msgstr ""
+
+#: templates/admin/settings.php:118
+msgid "Retries"
+msgstr ""
+
+#: templates/admin/settings.php:119
+msgid "Last error"
+msgstr ""
+
+#. translators: %d: number of messages
+#: templates/admin/settings.php:137
+#, php-format
+msgid "Showing the next %d messages."
+msgstr ""
+
+#: templates/admin/settings.php:143
+msgid "Retry now"
+msgstr ""
+
+#: templates/admin/settings.php:144
+msgid "Discard all waiting messages? They will not be sent."
+msgstr ""
+
+#: templates/admin/settings.php:144
+msgid "Discard all"
+msgstr ""
+
+#: templates/admin/test.php:27
+msgid "Recipient"
+msgstr ""
+
+#: templates/admin/test.php:31
+msgid "Send through"
+msgstr ""
+
+#: templates/admin/test.php:34
+msgid "Failover chain (like regular mails)"
+msgstr ""
+
+#. translators: %s: connection label
+#: templates/admin/test.php:42
+#, php-format
+msgid "%s (disabled)"
+msgstr ""
+
+#: templates/admin/test.php:48
+msgid "A single connection is used even if it is disabled, so you can test it before enabling."
+msgstr ""
+
+#: templates/admin/test.php:52
+msgid "Ignore redirection for this test mail"
+msgstr ""
+
+#: templates/admin/test.php:53
+msgid "When checked, the test mail goes directly to the entered recipient, even if wp-config.php forces redirection."
 msgstr ""

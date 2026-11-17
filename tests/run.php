@@ -22,6 +22,7 @@ if ( $collect ) {
 
 $scenarios = array(
 	array( 'tests/coverage-check.php' ),
+	array( 'tests/translations.php' ),
 	array( 'tests/update-context.php', 'cli' ),
 	array( 'tests/update-context.php', 'rest' ),
 	array( 'tests/bootstrap.php' ),
@@ -45,6 +46,7 @@ foreach ( array( 'enabled', 'unset' ) as $mode ) {
 	$scenarios[] = array( 'tests/integration.php', $mode, 'tracking' );
 }
 $scenarios[] = array( 'tests/integration.php', 'enabled', 'dns' );
+$scenarios[] = array( 'tests/integration.php', 'enabled', 'm9' );
 $scenarios[] = array( 'tests/integration.php', 'enabled', 'oauth' );
 $scenarios[] = array( 'tests/integration.php', 'unset', 'oauth' );
 foreach ( array( 'smtp', 'editor', 'editor-false', 'secrets' ) as $mode ) {
