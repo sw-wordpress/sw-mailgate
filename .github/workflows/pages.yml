@@ -1,0 +1,60 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - 'pages/**'
+      - '.github/workflows/pages.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'pages/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install isolated documentation toolchain
+        env:
+          DOCS_BUILD: ${{ runner.temp }}/mailgate-docs
+        run: |
+          mkdir -p "$DOCS_BUILD"
+          cp -R pages "$DOCS_BUILD/pages"
+          npm install --prefix "$DOCS_BUILD" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund vitepress@1.6.4
+      - name: Build documentation and check internal links
+        env:
+          DOCS_BUILD: ${{ runner.temp }}/mailgate-docs
+        run: '"$DOCS_BUILD/node_modules/.bin/vitepress" build "$DOCS_BUILD/pages"'
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/mailgate-docs/pages/.vitepress/dist
+
+  deploy:
+    name: Deploy documentation
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
