@@ -31,6 +31,13 @@ redirection show and control where mail goes.
 
 English and German (`de_DE`, also used for `de_DE_formal`).
 
+## User documentation
+
+[Getting Started](pages/getting-started.md) · [Configuration](pages/configuration.md)
+
+The user guide is built and published to GitHub Pages by Actions.
+Deployment setup: [pages/README.md](pages/README.md).
+
 ## Usage
 
 1. Open **Mailgate → Connections** and under **Add connection** click a provider, e.g. **SMTP** or **Mailgun**.

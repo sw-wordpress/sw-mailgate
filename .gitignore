@@ -1,6 +1,9 @@
 /vendor/
 /vendor-prefixed/
 /node_modules/
+/pages/node_modules/
+/pages/.vitepress/cache/
+/pages/.vitepress/dist/
 .phpcs.cache
 *.log
 .env
